@@ -156,6 +156,8 @@ The AWS budget emails at 80% of actual spend and 100% of forecast spend. **It do
 | The WebSocket authorizer, `$connect`/`$disconnect` and the publisher, with DynamoDB and the management API in moto | only valid Cognito tokens connect, only a run's owner subscribes, events reach the connection |
 | The API behind the Lambda Web Adapter, called with API Gateway HTTP API v2 events and RS256 tokens shaped like Cognito's | offline token checks with the deploy-time JWKS, multipart uploads in base64 |
 
+In CI nothing is pulled anonymously from ECR Public, which answers `429 Data limit exceeded` to shared runner addresses: the emulator is AWS's release binary from GitHub, pinned by checksum, and the Lambda Web Adapter image comes from the Actions cache (`scripts/ci-lambda-adapter.sh`).
+
 It does not cover IAM policies, VPC endpoints, RDS Proxy, the Step Functions service itself, Bedrock, Cognito's hosted pages, CloudFront and WAF: those are what the first real `connect-aws` run and its `runtime-check` probe verify. `SECONDCHANCE_EMULATION_KEEP=1` leaves the environment running for inspection.
 
 ## To check on the first real deployment

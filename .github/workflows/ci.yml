@@ -28,6 +28,13 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.11.8"
+      # ECR Public answers "429 Data limit exceeded" to shared runner addresses: the Lambda Web Adapter
+      # image comes from the Actions cache, and from ECR only when the cache is cold.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/lambda-adapter.tar
+          key: lambda-adapter-${{ hashFiles('api/Dockerfile') }}
+      - run: bash scripts/ci-lambda-adapter.sh ~/.cache/lambda-adapter.tar
       - run: docker compose up -d
       - name: API answers on /health
         run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/health
@@ -48,6 +55,13 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.11.8"
+      # ECR Public answers "429 Data limit exceeded" to shared runner addresses: the Lambda Web Adapter
+      # image comes from the Actions cache, and from ECR only when the cache is cold.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/lambda-adapter.tar
+          key: lambda-adapter-${{ hashFiles('api/Dockerfile') }}
+      - run: bash scripts/ci-lambda-adapter.sh ~/.cache/lambda-adapter.tar
       - run: bash scripts/emulate-aws.sh
         env:
           SECONDCHANCE_EMULATION_KEEP: "1" # the next step needs the containers for their logs
@@ -90,5 +104,5 @@ jobs:
         run: docker run --rm -v "$PWD:/src:ro" aquasec/trivy:0.75.0 config --severity HIGH,CRITICAL --exit-code 1 /src/infra/terraform
       - name: shellcheck
         run: |
-          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 /s/deploy.sh /s/destroy.sh /s/grant-platform-admin.sh /s/build-images.sh /s/connect-aws.sh /s/verify-aws.sh /s/emulate-aws.sh
+          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 /s/deploy.sh /s/destroy.sh /s/grant-platform-admin.sh /s/build-images.sh /s/connect-aws.sh /s/verify-aws.sh /s/emulate-aws.sh /s/ci-lambda-adapter.sh
           docker run --rm -v "$PWD/infra/emulation:/e:ro" koalaman/shellcheck:v0.10.0 /e/aurora-init.sh
