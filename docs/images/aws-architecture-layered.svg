@@ -1,0 +1,285 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1280" viewBox="0 0 1800 1280" role="img" aria-labelledby="title desc">
+  <title id="title">SecondChance layered AWS architecture</title>
+  <desc id="desc">Professional layered architecture showing public edge, API ingress, private orchestration, a mandatory MCP Gateway policy layer, governed RAG and data services, and cross-cutting operations.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F7FAFC"/><stop offset="1" stop-color="#EEF3F8"/></linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#0B2239"/><stop offset="1" stop-color="#183A59"/></linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#FF9900"/><stop offset="1" stop-color="#E76500"/></linearGradient>
+    <linearGradient id="orangeSoft" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFF9EE"/><stop offset="1" stop-color="#FFF1DA"/></linearGradient>
+    <linearGradient id="blueSoft" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F4F9FF"/><stop offset="1" stop-color="#EAF3FD"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#0B2239" flood-opacity=".13"/></filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0B2239" flood-opacity=".09"/></filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2563EB"/></marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#E76500"/></marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0F766E"/></marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #10243A; }
+      .section { font-size: 18px; font-weight: 800; letter-spacing: 1.5px; }
+      .cardTitle { font-size: 20px; font-weight: 750; }
+      .cardText { font-size: 14px; fill: #40566D; }
+      .small { font-size: 12px; fill: #52687E; }
+      .tiny { font-size: 11px; fill: #60758A; }
+      .white { fill: #FFFFFF; }
+      .blueFlow { fill: none; stroke: #2563EB; stroke-width: 4; marker-end: url(#arrowBlue); }
+      .orangeFlow { fill: none; stroke: #E76500; stroke-width: 5; marker-end: url(#arrowOrange); }
+      .tealFlow { fill: none; stroke: #0F766E; stroke-width: 3; stroke-dasharray: 9 7; marker-end: url(#arrowTeal); }
+      .card { fill: #FFFFFF; stroke: #B8C7D6; stroke-width: 1.5; filter: url(#softShadow); }
+      .resource { fill: #FFFFFF; stroke: #9EB1C5; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1280" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <text x="48" y="58" font-size="38" font-weight="800">SecondChance on AWS</text>
+  <text x="48" y="91" font-size="16" fill="#536A80">Layered serverless architecture · every agent tool call is governed before it can reach RAG, data or AI services</text>
+  <rect x="1512" y="36" width="240" height="48" rx="12" fill="#FFFFFF" stroke="#D4DEE8"/>
+  <rect x="1526" y="47" width="48" height="27" rx="6" fill="#FF9900"/>
+  <text x="1550" y="67" text-anchor="middle" font-size="14" font-weight="800" class="white">aws</text>
+  <text x="1590" y="66" font-size="15" font-weight="700">EU AWS Region</text>
+
+  <!-- Layer 1: Public entry -->
+  <rect x="40" y="120" width="1720" height="205" rx="22" fill="#FFFFFF" stroke="#C8D3DE" stroke-width="2"/>
+  <rect x="40" y="120" width="1720" height="42" rx="22" fill="url(#navy)"/>
+  <rect x="40" y="142" width="1720" height="20" fill="url(#navy)"/>
+  <text x="64" y="148" class="section white">01 · PUBLIC EDGE, IDENTITY &amp; API ENTRY</text>
+
+  <!-- Users -->
+  <rect x="70" y="184" width="180" height="112" rx="14" class="card"/>
+  <circle cx="112" cy="221" r="15" fill="none" stroke="#172F48" stroke-width="3"/>
+  <path d="M84 273c2-25 14-37 28-37s26 12 28 37" fill="none" stroke="#172F48" stroke-width="3"/>
+  <text x="158" y="220" class="cardTitle">People</text>
+  <text x="158" y="245" class="small">Donors · NGOs</text>
+  <text x="158" y="267" class="small">Coordinators</text>
+
+  <!-- Edge -->
+  <rect x="320" y="184" width="230" height="112" rx="14" class="card"/>
+  <rect x="338" y="204" width="48" height="48" rx="10" fill="#8B5CF6"/>
+  <circle cx="362" cy="228" r="14" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M348 228h28M362 214c-8 8-8 20 0 28M362 214c8 8 8 20 0 28" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <text x="402" y="216" class="cardTitle">AWS WAF</text>
+  <text x="402" y="241" class="cardTitle">+ CloudFront</text>
+  <text x="402" y="269" class="small">Protected public edge</text>
+
+  <rect x="590" y="184" width="205" height="112" rx="14" class="card"/>
+  <rect x="608" y="204" width="48" height="48" rx="10" fill="#3F8624"/>
+  <path d="M615 217q17-10 34 0v24q-17 10-34 0z" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="672" y="220" class="cardTitle">Private S3</text>
+  <text x="672" y="246" class="cardText">React web app</text>
+  <text x="672" y="269" class="small">CloudFront OAC only</text>
+
+  <rect x="835" y="184" width="215" height="112" rx="14" class="card"/>
+  <rect x="853" y="204" width="48" height="48" rx="10" fill="#DD344C"/>
+  <circle cx="877" cy="224" r="8" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M861 245c2-11 8-16 16-16s14 5 16 16" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="917" y="220" class="cardTitle">Cognito</text>
+  <text x="917" y="246" class="cardText">Hosted UI · PKCE</text>
+  <text x="917" y="269" class="small">Short-lived JWT</text>
+
+  <rect x="1100" y="184" width="235" height="112" rx="14" class="card"/>
+  <rect x="1118" y="204" width="48" height="48" rx="10" fill="#E7157B"/>
+  <path d="M1128 214v28M1142 214v28M1156 214v28M1122 221h40M1122 235h40" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1182" y="220" class="cardTitle">API Gateway</text>
+  <text x="1182" y="246" class="cardText">JWT authorizer</text>
+  <text x="1182" y="269" class="small">Throttling · routing</text>
+
+  <rect x="1380" y="184" width="330" height="112" rx="14" class="card"/>
+  <rect x="1398" y="204" width="48" height="48" rx="10" fill="#ED7100"/>
+  <path d="M1412 242l10-28 10 28M1417 229h10" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="1462" y="219" class="cardTitle">Application API</text>
+  <text x="1462" y="244" class="cardText">FastAPI · RBAC · admission control</text>
+  <text x="1462" y="268" class="small">Only authenticated application entry</text>
+
+  <path d="M250 240H310" class="blueFlow"/>
+  <path d="M550 240H580" class="blueFlow"/>
+  <path d="M795 240H825" class="blueFlow"/>
+  <path d="M1050 240H1090" class="blueFlow"/>
+  <path d="M1335 240H1370" class="blueFlow"/>
+
+  <!-- AWS private boundary -->
+  <rect x="40" y="350" width="1720" height="755" rx="24" fill="url(#blueSoft)" stroke="#6EA8FF" stroke-width="2.5"/>
+  <rect x="62" y="368" width="1676" height="42" rx="10" fill="#E3F0FF" stroke="#A9C9EE" stroke-dasharray="7 5"/>
+  <text x="84" y="395" class="section">AWS VPC · PRIVATE SUBNETS · TWO AVAILABILITY ZONES · VPC ENDPOINTS · NO NAT GATEWAY</text>
+
+  <!-- Layer 2 -->
+  <text x="72" y="448" class="section">02 · PRIVATE ORCHESTRATION</text>
+
+  <rect x="80" y="470" width="265" height="160" rx="16" class="card"/>
+  <rect x="98" y="490" width="50" height="50" rx="10" fill="#ED7100"/>
+  <path d="M111 529l12-29 12 29M116 516h14" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="165" y="513" class="cardTitle">API Service</text>
+  <text x="165" y="539" class="cardText">Tenant transactions</text>
+  <line x1="103" y1="560" x2="321" y2="560" stroke="#D9E2EA"/>
+  <text x="103" y="586" class="small">Direct application operations</text>
+  <text x="103" y="608" class="small">enqueue durable background work</text>
+
+  <rect x="395" y="470" width="265" height="160" rx="16" class="card"/>
+  <rect x="413" y="490" width="50" height="50" rx="10" fill="#E7157B"/>
+  <path d="M424 505h28v21h-28zM428 509h20M428 515h20M428 521h14" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="480" y="513" class="cardTitle">Amazon SQS</text>
+  <text x="480" y="539" class="cardText">agents · jobs · notify</text>
+  <line x1="418" y1="560" x2="636" y2="560" stroke="#D9E2EA"/>
+  <text x="418" y="586" class="small">Retries · partial responses</text>
+  <text x="418" y="608" class="small">Dead-letter queues</text>
+
+  <rect x="710" y="454" width="505" height="192" rx="18" fill="#FFFFFF" stroke="#5B83B2" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="710" y="454" width="505" height="42" rx="18" fill="url(#navy)"/>
+  <rect x="710" y="478" width="505" height="18" fill="url(#navy)"/>
+  <text x="734" y="482" font-size="19" font-weight="800" class="white">AGENT RUNTIME</text>
+  <rect x="734" y="516" width="128" height="76" rx="12" fill="#142D46"/>
+  <text x="798" y="546" text-anchor="middle" font-size="16" font-weight="800" class="white">Supervisor</text>
+  <text x="798" y="570" text-anchor="middle" class="small white">plans · routes</text>
+  <path d="M862 554H900" class="blueFlow"/>
+  <rect x="910" y="508" width="278" height="92" rx="12" fill="#F2F7FC" stroke="#B5C7D8"/>
+  <text x="930" y="532" font-size="14" font-weight="800">APPROVED SPECIALISTS</text>
+  <text x="930" y="556" class="small">Donation operations · logistics</text>
+  <text x="930" y="578" class="small">Knowledge research · compliance</text>
+  <rect x="734" y="606" width="454" height="26" rx="7" fill="#E8F0F8"/>
+  <text x="961" y="624" text-anchor="middle" class="small">Stateless, idempotent execution · bounded plans</text>
+
+  <rect x="1265" y="470" width="220" height="160" rx="16" class="card"/>
+  <rect x="1283" y="490" width="50" height="50" rx="10" fill="#ED7100"/>
+  <path d="M1296 529l12-29 12 29M1301 516h14" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="1350" y="513" class="cardTitle">Job Worker</text>
+  <text x="1350" y="539" class="cardText">PDF ingestion</text>
+  <line x1="1288" y1="560" x2="1461" y2="560" stroke="#D9E2EA"/>
+  <text x="1288" y="586" class="small">parse · chunk · embed</text>
+  <text x="1288" y="608" class="small">publish knowledge</text>
+
+  <rect x="1528" y="470" width="190" height="160" rx="16" class="card"/>
+  <rect x="1546" y="490" width="50" height="50" rx="10" fill="#5F6B7A"/>
+  <path d="M1558 500h26v29h-26zM1563 495h16v10M1563 512h16M1563 519h12" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1612" y="513" class="cardTitle">Maintenance</text>
+  <text x="1612" y="539" class="cardText">Retention</text>
+  <line x1="1551" y1="560" x2="1694" y2="560" stroke="#D9E2EA"/>
+  <text x="1551" y="586" class="small">stale-work requeue</text>
+  <text x="1551" y="608" class="small">scheduled operations</text>
+
+  <path d="M1520 296V430H213V460" class="blueFlow"/>
+  <path d="M345 550H385" class="blueFlow"/>
+  <path d="M660 550H700" class="blueFlow"/>
+  <path d="M528 630V744H1375V640" class="blueFlow"/>
+
+  <!-- Shared memory -->
+  <rect x="710" y="660" width="505" height="70" rx="14" fill="#FFFFFF" stroke="#527DA9" stroke-width="1.5"/>
+  <rect x="728" y="676" width="42" height="38" rx="8" fill="#4F46E5"/>
+  <ellipse cx="749" cy="684" rx="13" ry="5" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M736 684v18c0 7 26 7 26 0v-18M736 693c0 7 26 7 26 0" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="788" y="687" class="cardTitle">Shared Agent Memory</text>
+  <text x="788" y="710" class="small">Run · conversation · tenant scopes · TTL · tenant-isolated in Aurora</text>
+  <path d="M962 646V656" class="blueFlow"/>
+
+  <!-- MCP Gateway Layer -->
+  <rect x="80" y="760" width="1638" height="150" rx="20" fill="url(#orangeSoft)" stroke="#E76500" stroke-width="3" filter="url(#shadow)"/>
+  <rect x="80" y="760" width="1638" height="46" rx="18" fill="url(#orange)"/>
+  <rect x="80" y="787" width="1638" height="19" fill="url(#orange)"/>
+  <text x="106" y="791" font-size="22" font-weight="850" class="white">03 · MCP GATEWAY — MANDATORY AGENT TOOL BOUNDARY</text>
+  <text x="1250" y="791" font-size="14" font-weight="700" class="white">No agent reaches downstream services directly</text>
+
+  <rect x="106" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="228" y="848" text-anchor="middle" font-size="15" font-weight="800">Tool allow-list</text>
+  <text x="228" y="870" text-anchor="middle" class="small">approved names and agents</text>
+  <rect x="373" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="495" y="848" text-anchor="middle" font-size="15" font-weight="800">Schema validation</text>
+  <text x="495" y="870" text-anchor="middle" class="small">strict typed arguments</text>
+  <rect x="640" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="762" y="848" text-anchor="middle" font-size="15" font-weight="800">Tenant RBAC</text>
+  <text x="762" y="870" text-anchor="middle" class="small">role and active run step</text>
+  <rect x="907" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="1029" y="848" text-anchor="middle" font-size="15" font-weight="800">DynamoDB quotas</text>
+  <text x="1029" y="870" text-anchor="middle" class="small">distributed rate limits</text>
+  <rect x="1174" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="1296" y="848" text-anchor="middle" font-size="15" font-weight="800">Audit trail</text>
+  <text x="1296" y="870" text-anchor="middle" class="small">correlation and decisions</text>
+  <rect x="1441" y="824" width="245" height="62" rx="12" fill="#FFFFFF" stroke="#F0B36B"/>
+  <text x="1563" y="848" text-anchor="middle" font-size="15" font-weight="800">Timeout &amp; bulkhead</text>
+  <text x="1563" y="870" text-anchor="middle" class="small">bounded concurrency</text>
+
+  <path d="M1215 590H1238V750" class="orangeFlow"/>
+
+  <!-- Layer 4: governed services -->
+  <text x="72" y="955" class="section">04 · GOVERNED SERVICE RESOURCES</text>
+
+  <rect x="80" y="975" width="250" height="102" rx="15" fill="#FFFFFF" stroke="#E76500" stroke-width="2" filter="url(#softShadow)"/>
+  <rect x="98" y="994" width="48" height="48" rx="10" fill="#ED7100"/>
+  <path d="M111 1033l11-29 11 29M116 1020h12" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="162" y="1017" class="cardTitle">Tool Executor</text>
+  <text x="162" y="1042" class="cardText">Private domain tools</text>
+  <text x="162" y="1063" class="small">gateway role only</text>
+
+  <rect x="375" y="955" width="640" height="140" rx="18" fill="#FFFFFF" stroke="#2E73C5" stroke-width="2" filter="url(#softShadow)"/>
+  <rect x="375" y="955" width="640" height="38" rx="18" fill="#245B91"/>
+  <rect x="375" y="976" width="640" height="17" fill="#245B91"/>
+  <text x="397" y="981" font-size="18" font-weight="800" class="white">RAG &amp; KNOWLEDGE SERVICE</text>
+  <rect x="397" y="1008" width="172" height="64" rx="11" fill="#F2F7FC" stroke="#B5C7D8"/>
+  <text x="483" y="1033" text-anchor="middle" font-size="14" font-weight="800">Hybrid retrieval</text>
+  <text x="483" y="1054" text-anchor="middle" class="small">FTS + pgvector</text>
+  <path d="M569 1040H598" class="blueFlow"/>
+  <rect x="608" y="1008" width="172" height="64" rx="11" fill="#F2F7FC" stroke="#B5C7D8"/>
+  <text x="694" y="1033" text-anchor="middle" font-size="14" font-weight="800">Grounded answer</text>
+  <text x="694" y="1054" text-anchor="middle" class="small">citations · abstention</text>
+  <path d="M780 1040H809" class="blueFlow"/>
+  <rect x="819" y="1008" width="172" height="64" rx="11" fill="#F2F7FC" stroke="#B5C7D8"/>
+  <text x="905" y="1033" text-anchor="middle" font-size="14" font-weight="800">Human approval</text>
+  <text x="905" y="1054" text-anchor="middle" class="small">before write actions</text>
+
+  <rect x="1060" y="955" width="658" height="140" rx="18" fill="#FFFFFF" stroke="#8198AE" stroke-width="1.8" filter="url(#softShadow)"/>
+  <text x="1082" y="981" font-size="17" font-weight="800">PRIVATE DATA &amp; AI SERVICES</text>
+
+  <rect x="1082" y="1000" width="190" height="72" rx="12" class="resource"/>
+  <rect x="1094" y="1012" width="42" height="42" rx="8" fill="#4F46E5"/>
+  <ellipse cx="1115" cy="1021" rx="13" ry="5" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M1102 1021v18c0 7 26 7 26 0v-18" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1148" y="1025" font-size="15" font-weight="800">Aurora</text>
+  <text x="1148" y="1046" class="small">RLS · pgvector</text>
+  <text x="1148" y="1063" class="tiny">PostgreSQL</text>
+
+  <rect x="1286" y="1000" width="190" height="72" rx="12" class="resource"/>
+  <rect x="1298" y="1012" width="42" height="42" rx="8" fill="#3F8624"/>
+  <path d="M1305 1021q14-8 28 0v23q-14 8-28 0z" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1352" y="1025" font-size="15" font-weight="800">Amazon S3</text>
+  <text x="1352" y="1046" class="small">tenant documents</text>
+  <text x="1352" y="1063" class="tiny">KMS encrypted</text>
+
+  <rect x="1490" y="1000" width="206" height="72" rx="12" class="resource"/>
+  <rect x="1502" y="1012" width="42" height="42" rx="8" fill="#00A4A6"/>
+  <path d="M1511 1045c1-10 4-17 12-25 8 8 11 15 12 25M1514 1032h18" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1556" y="1025" font-size="15" font-weight="800">Bedrock</text>
+  <text x="1556" y="1046" class="small">Converse · Titan</text>
+  <text x="1556" y="1063" class="tiny">Guardrails</text>
+
+  <path d="M900 910V938H60V1026H70" class="orangeFlow"/>
+  <path d="M330 1026H365" class="orangeFlow"/>
+  <path d="M1015 1040H1050" class="orangeFlow"/>
+  <path d="M1440 630V720H1732V938H1382V990" class="tealFlow"/>
+  <text x="1450" y="930" font-size="12" font-weight="700" fill="#0F766E">document ingestion path</text>
+
+  <!-- Cross-cutting ops -->
+  <rect x="40" y="1135" width="1720" height="112" rx="20" fill="#FFFFFF" stroke="#C8D3DE" stroke-width="2"/>
+  <rect x="40" y="1135" width="1720" height="38" rx="20" fill="url(#navy)"/>
+  <rect x="40" y="1156" width="1720" height="17" fill="url(#navy)"/>
+  <text x="64" y="1162" font-size="17" font-weight="800" class="white">CROSS-CUTTING OPERATIONS, SECURITY &amp; DELIVERY</text>
+
+  <text x="84" y="1209" font-size="15" font-weight="800">CloudWatch · X-Ray</text>
+  <text x="84" y="1230" class="small">logs · metrics · traces · alarms</text>
+  <line x1="348" y1="1189" x2="348" y2="1232" stroke="#D2DCE6"/>
+  <text x="388" y="1209" font-size="15" font-weight="800">SNS · AWS Budgets</text>
+  <text x="388" y="1230" class="small">operational and cost alerts</text>
+  <line x1="668" y1="1189" x2="668" y2="1232" stroke="#D2DCE6"/>
+  <text x="708" y="1209" font-size="15" font-weight="800">IAM · KMS · Secrets Manager</text>
+  <text x="708" y="1230" class="small">least privilege · encryption · short-lived auth</text>
+  <line x1="1065" y1="1189" x2="1065" y2="1232" stroke="#D2DCE6"/>
+  <text x="1105" y="1209" font-size="15" font-weight="800">Terraform · ECR · GitHub OIDC</text>
+  <text x="1105" y="1230" class="small">infrastructure as code · immutable images · keyless delivery</text>
+  <line x1="1510" y1="1189" x2="1510" y2="1232" stroke="#D2DCE6"/>
+  <text x="1548" y="1209" font-size="15" font-weight="800">EventBridge</text>
+  <text x="1548" y="1230" class="small">scheduled jobs</text>
+
+  <!-- Legend -->
+  <path d="M50 1267H100" class="blueFlow"/>
+  <text x="112" y="1272" class="tiny">application flow</text>
+  <path d="M245 1267H295" class="orangeFlow"/>
+  <text x="307" y="1272" class="tiny">mandatory governed agent path</text>
+  <path d="M530 1267H580" class="tealFlow"/>
+  <text x="592" y="1272" class="tiny">background ingestion</text>
+</svg>

@@ -1,0 +1,18 @@
+{
+  "version": "2026-10-v1",
+  "minimum_accuracy": 0.85,
+  "cases": [
+    {"request": "Vorrei donare 40 kg di pasta", "route": "donation_offer", "intent": "DIRECT_OPERATION"},
+    {"request": "We have surplus bread to donate", "route": "donation_offer", "intent": "DIRECT_OPERATION"},
+    {"request": "Chcemy przekazać nadwyżki pieczywa", "route": "donation_offer", "intent": "DIRECT_OPERATION"},
+    {"request": "Il centro cambia gli orari di apertura", "route": "center_update", "intent": "DIRECT_OPERATION"},
+    {"request": "Update center capacity to 50 crates", "route": "center_update", "intent": "DIRECT_OPERATION"},
+    {"request": "Pickup done, delivered to the center", "route": "mission_update", "intent": "DIRECT_OPERATION"},
+    {"request": "Come funziona la procedura per i surgelati?", "route": "procedure_question", "intent": "KNOWLEDGE_QUERY"},
+    {"request": "Hvordan er reglerne for kølevarer?", "route": "procedure_question", "intent": "KNOWLEDGE_QUERY"},
+    {"request": "Jakie są zasady przyjmowania mrożonek?", "route": "procedure_question", "intent": "KNOWLEDGE_QUERY"},
+    {"request": "Mostra le mie offerte attive", "route": null, "intent": "DIRECT_OPERATION"},
+    {"request": "Pianifica il ritiro e coordina la consegna", "route": "mission_update", "intent": "MULTI_AGENT_TASK"},
+    {"request": "Fammi un pagamento con bonifico", "route": null, "intent": "UNSUPPORTED"}
+  ]
+}

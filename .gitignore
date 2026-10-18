@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+infra/terraform/.plugin-cache/
+
+# Local AI coding assistants and private review notes
+graphify-out/
+.codex-remote-attachments/
+.claude/
+.codex/
+/CLAUDE.md
+/AGENTS.md
+docs/REVIEW-CRITICITA.md

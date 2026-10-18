@@ -1,0 +1,94 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.8"
+      - run: uvx ruff@0.16.10 check .
+      - run: uvx ruff@0.16.10 check mcp-gateway
+        working-directory: .
+
+  # The README path, from an empty runner: compose up, then the test suite.
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.8"
+      - run: docker compose up -d
+      - name: API answers on /health
+        run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/health
+      - run: uv run --locked pytest
+        working-directory: api
+      - run: uv run --locked pytest
+        working-directory: mcp-gateway
+      - if: failure()
+        run: docker compose logs
+
+  # The Lambda images deploy.sh pushes, run by the AWS Runtime Interface Emulator with a read-only
+  # filesystem against an Aurora-like database: IAM tokens over TLS, Lambda-to-Lambda Invoke, SQS
+  # records and the Lambda Web Adapter behind API Gateway events. No AWS account (infra/emulation).
+  aws-emulation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.8"
+      - run: bash scripts/emulate-aws.sh
+        env:
+          SECONDCHANCE_EMULATION_KEEP: "1" # the next step needs the containers for their logs
+      - if: always()
+        run: |
+          [ "${{ job.status }}" = success ] || docker compose -f infra/emulation/compose.yaml logs --no-color
+          docker compose -f infra/emulation/compose.yaml down -v
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build # includes the type check
+
+  # Infrastructure as code: format, validate and scan, all from pinned images (NFR-014).
+  iac:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: terraform fmt and validate
+        run: |
+          docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf hashicorp/terraform:1.16.5 fmt -recursive -check
+          for stack in bootstrap envs/demo envs/pilot; do
+            docker run --rm -v "$PWD/infra/terraform:/tf" -w "/tf/$stack" hashicorp/terraform:1.16.5 init -backend=false -input=false
+            docker run --rm -v "$PWD/infra/terraform:/tf" -w "/tf/$stack" hashicorp/terraform:1.16.5 validate
+          done
+          # Offline evaluation with mocked providers: Lambda limits, account quotas, plan-time guards.
+          docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/envs/demo hashicorp/terraform:1.16.5 test
+          docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/modules/secondchance hashicorp/terraform:1.16.5 init -backend=false -input=false
+          docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/modules/secondchance hashicorp/terraform:1.16.5 test
+      - name: trivy (high and critical misconfigurations fail the build)
+        run: docker run --rm -v "$PWD:/src:ro" aquasec/trivy:0.75.0 config --severity HIGH,CRITICAL --exit-code 1 /src/infra/terraform
+      - name: shellcheck
+        run: |
+          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 /s/deploy.sh /s/destroy.sh /s/grant-platform-admin.sh /s/build-images.sh /s/connect-aws.sh /s/verify-aws.sh /s/emulate-aws.sh
+          docker run --rm -v "$PWD/infra/emulation:/e:ro" koalaman/shellcheck:v0.10.0 /e/aurora-init.sh

@@ -1,0 +1,23 @@
+# Weekly updates, never for releases younger than 14 days (supply chain, NFR-024).
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /api
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+  - package-ecosystem: docker
+    directories: [/api, /db, /web]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+  - package-ecosystem: terraform
+    directories: [/infra/terraform/bootstrap, /infra/terraform/envs/demo, /infra/terraform/envs/pilot]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "catalog_version": "2026-10-v1",
+  "specialists": [
+    {
+      "name": "request_analysis",
+      "description": "Clarifies the request, constraints and required evidence",
+      "instructions": "Analyse scope, missing information and assumptions. Do not make operational changes.",
+      "resources": ["run_memory", "routing_context", "bedrock"],
+      "tools": []
+    },
+    {
+      "name": "donation_operations",
+      "description": "Checks a donation request, handling constraints and the safest next operational step",
+      "instructions": "Analyse donation type, quantity, timing, allergens and cold-chain constraints. Use authorised knowledge evidence and propose only pending actions.",
+      "resources": ["run_memory", "knowledge_index", "bedrock"],
+      "tools": ["knowledge_search"]
+    },
+    {
+      "name": "logistics_planning",
+      "description": "Builds a feasible movement or mission plan from known constraints",
+      "instructions": "Analyse timing, capacity and dependencies using authorised procedures. Never assign a person or confirm a mission.",
+      "resources": ["run_memory", "knowledge_index", "bedrock"],
+      "tools": ["knowledge_search"]
+    },
+    {
+      "name": "knowledge_research",
+      "description": "Finds authorised evidence needed to answer the request",
+      "instructions": "Retrieve authorised evidence, identify gaps and cite only supplied findings. Abstain when evidence is missing.",
+      "resources": ["run_memory", "knowledge_index", "bedrock"],
+      "tools": ["knowledge_search"]
+    },
+    {
+      "name": "compliance_review",
+      "description": "Reviews proposed handling for safety, policy and mandatory human approval",
+      "instructions": "Review prior findings and authorised policy evidence conservatively. Flag unsafe proposals; never approve an operation.",
+      "resources": ["run_memory", "knowledge_index", "bedrock"],
+      "tools": ["knowledge_search"]
+    }
+  ]
+}

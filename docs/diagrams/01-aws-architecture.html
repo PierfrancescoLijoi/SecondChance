@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecondChance · AWS architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:  #f5f5f5;
+      --color-ink:    #2d3142;
+      --color-muted:  #4f5d75;
+      --color-soft:   #7a8399;
+      --color-accent: #eb6c36;
+      --color-link:   #2e5aa8;
+      --color-rule:   rgba(45,49,66,0.12);
+      --font-sans:    'Geist', system-ui, sans-serif;
+      --font-serif:   'Instrument Serif', serif;
+      --font-mono:    'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); padding: 3rem 2rem; }
+    .frame { max-width: 1240px; margin: 0 auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    .diagram { overflow-x: auto; }
+    svg { width: 100%; min-width: 960px; display: block; }
+    .cards { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 1rem; margin-top: 1.5rem; }
+    @media (max-width: 800px) { .cards { grid-template-columns: 1fr; } }
+    .card { background: #ffffff; border: 1px solid var(--color-rule); border-radius: 6px; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.ink { background: var(--color-ink); }
+    .card-dot.link { background: var(--color-link); }
+    .card .eyebrow { margin-bottom: 0.4rem; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.5; }
+    .card li { margin-bottom: 0.3rem; padding-left: 0.875rem; position: relative; }
+    .card li::before { content: '—'; position: absolute; left: 0; color: var(--color-soft); }
+    code { font-family: var(--font-mono); font-size: 0.75rem; }
+    .footer { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid rgba(45,49,66,0.10); font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-soft); letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · SecondChance v0.3 · eu-central-1</p>
+    <h1>SecondChance on AWS: serverless, tenant-isolated, idle at zero</h1>
+
+    <div class="diagram">
+    <svg viewBox="0 0 1280 880" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="secondchance-aws-title secondchance-aws-desc">
+      <title id="secondchance-aws-title">SecondChance on AWS: serverless reference architecture, v0.3</title>
+      <desc id="secondchance-aws-desc">Users reach a FastAPI Lambda through API Gateway with Cognito tokens; in private subnets the API, a stateless agents worker and an OR-Tools worker share Aurora PostgreSQL under row-level security, three SQS queues with dead-letter queues hand work between them, S3 keeps documents and artifacts under tenant prefixes, model calls pass through Bedrock Guardrails, and the ADOT layer sends traces, metrics and logs to X-Ray and CloudWatch, which raises SNS alarms.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="1280" height="880" fill="#f5f5f5"/>
+
+      <!-- Zones (painted first) -->
+      <rect x="24" y="40" width="400" height="264" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="36" y="44" width="86" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="40" y="53" fill="rgba(45,49,66,0.55)" font-size="7" font-family="'Geist Mono', monospace" letter-spacing="0.14em">EDGE · IDENTITY</text>
+
+      <rect x="24" y="320" width="400" height="360" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="280" y="324" width="86" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="284" y="333" fill="rgba(45,49,66,0.55)" font-size="7" font-family="'Geist Mono', monospace" letter-spacing="0.14em">ASYNC · OBJECTS</text>
+
+      <rect x="464" y="176" width="480" height="432" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,4"/>
+      <rect x="476" y="180" width="112" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="480" y="189" fill="rgba(45,49,66,0.55)" font-size="7" font-family="'Geist Mono', monospace" letter-spacing="0.14em">VPC · PRIVATE × 2 AZ</text>
+      <text x="480" y="592" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">endpoints: s3 (gateway) · bedrock-runtime · sqs · no NAT</text>
+
+      <rect x="1000" y="40" width="232" height="280" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="1012" y="44" width="70" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="1016" y="53" fill="rgba(45,49,66,0.55)" font-size="7" font-family="'Geist Mono', monospace" letter-spacing="0.14em">AI · BEDROCK</text>
+
+      <rect x="464" y="624" width="768" height="184" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="476" y="628" width="158" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="480" y="637" fill="rgba(45,49,66,0.55)" font-size="7" font-family="'Geist Mono', monospace" letter-spacing="0.14em">OBSERVABILITY · OPENTELEMETRY</text>
+
+      <!-- Arrows (behind nodes) -->
+      <!-- Web → Cognito -->
+      <path d="M 112,224 V 112 Q 112,104 120,104 H 264" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- Web → API Gateway -->
+      <path d="M 184,256 H 264" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- API Gateway → API λ -->
+      <path d="M 408,256 H 488" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- API λ → Aurora (tenant-scoped transaction) -->
+      <path d="M 648,256 H 728" fill="none" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <!-- API λ → SQS (enqueue) -->
+      <path d="M 512,288 V 304 Q 512,312 504,312 H 400 Q 392,312 392,320 V 352" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- SQS agents → Agents worker -->
+      <path d="M 408,408 H 488" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- SQS notify → Notify -->
+      <path d="M 264,464 H 184" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- SQS jobs → Worker -->
+      <path d="M 408,520 H 488" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- Notify → users (email via SES) -->
+      <path d="M 112,432 V 288" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- Agents worker → Aurora -->
+      <path d="M 648,392 H 780 Q 788,392 788,384 V 304" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- Agents worker → Guardrails -->
+      <path d="M 648,424 H 952 Q 960,424 960,416 V 128 Q 960,120 968,120 H 1016" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- API λ → Guardrails -->
+      <path d="M 624,224 V 104 Q 624,96 632,96 H 1016" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- Guardrails → models -->
+      <path d="M 1116,136 V 208" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- Worker → Bedrock models (embeddings) -->
+      <path d="M 648,536 H 976 Q 984,536 984,528 V 264 Q 984,256 992,256 H 1016" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- Worker → Aurora (hops over agents → Guardrails at y=424) -->
+      <path d="M 648,504 H 860 Q 868,504 868,496 V 432 A 8,8 0 0,1 868,416 V 304" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- Worker → S3 -->
+      <path d="M 488,544 H 456 Q 448,544 448,552 V 616 Q 448,624 440,624 H 408" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- ADOT → X-Ray -->
+      <path d="M 648,684 H 744" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- ADOT → CloudWatch -->
+      <path d="M 648,764 H 744" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- CloudWatch → SNS -->
+      <path d="M 928,764 H 1016" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Arrow labels -->
+      <rect x="120" y="158" width="60" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="150" y="167" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OIDC LOGIN</text>
+      <rect x="195" y="238" width="58" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="224" y="247" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">HTTPS · JWT</text>
+      <rect x="662" y="238" width="52" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="688" y="247" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">TENANT TX</text>
+      <rect x="418" y="294" width="44" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="440" y="303" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE</text>
+      <rect x="120" y="354" width="62" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="151" y="363" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EMAIL · SES</text>
+      <rect x="680" y="374" width="68" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="714" y="383" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RUN · MEMORY</text>
+      <rect x="776" y="78" width="48" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="800" y="87" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">CONVERSE</text>
+      <rect x="744" y="518" width="32" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="760" y="527" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EMBED</text>
+      <rect x="876" y="452" width="34" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="893" y="461" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE</text>
+      <rect x="678" y="666" width="36" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="696" y="675" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">TRACES</text>
+      <rect x="657" y="746" width="78" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="696" y="755" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">METRICS · LOGS</text>
+      <rect x="954" y="746" width="36" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="972" y="755" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ALARMS</text>
+
+      <!-- Editorial callout -->
+      <text font-family="'Instrument Serif', serif" font-style="italic" font-size="14" fill="#4f5d75">
+        <tspan x="1016" y="420">nothing lives in a function:</tspan>
+        <tspan x="1016" y="438">runs, steps and memory sit in</tspan>
+        <tspan x="1016" y="456">Aurora, objects in S3</tspan>
+      </text>
+
+      <!-- Node: Web app (user) -->
+      <rect x="40" y="224" width="144" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="224" width="144" height="64" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <rect x="48" y="230" width="28" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.40)" stroke-width="0.8"/>
+      <text x="62" y="239" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USER</text>
+      <text x="112" y="260" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Web app · PWA</text>
+      <text x="112" y="276" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">CloudFront + S3</text>
+
+      <!-- Node: Cognito -->
+      <rect x="264" y="72" width="144" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="264" y="72" width="144" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="272" y="78" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="286" y="87" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AUTH</text>
+      <text x="336" y="108" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cognito</text>
+      <text x="336" y="124" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">groups = roles</text>
+
+      <!-- Node: API Gateway -->
+      <rect x="264" y="224" width="144" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="264" y="224" width="144" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="272" y="230" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="286" y="239" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EDGE</text>
+      <text x="336" y="260" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">API Gateway</text>
+      <text x="336" y="276" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HTTP API · JWT auth</text>
+
+      <!-- Node: API Lambda -->
+      <rect x="488" y="224" width="160" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="224" width="160" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="496" y="230" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="506" y="239" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">λ</text>
+      <text x="568" y="260" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">API · FastAPI</text>
+      <text x="568" y="276" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RBAC · RAG · audit</text>
+
+      <!-- Node: Agents worker Lambda -->
+      <rect x="488" y="376" width="160" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="376" width="160" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="496" y="382" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="506" y="391" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">λ</text>
+      <text x="568" y="412" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Agents worker</text>
+      <text x="568" y="428" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">stateless · 1 step / msg</text>
+
+      <!-- Node: Worker Lambda -->
+      <rect x="488" y="488" width="160" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="488" width="160" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="496" y="494" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="506" y="503" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">λ</text>
+      <text x="568" y="524" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Worker</text>
+      <text x="568" y="540" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">OR-Tools · ingestion</text>
+
+      <!-- Node: Aurora (focal) -->
+      <rect x="728" y="208" width="200" height="96" rx="6" fill="#f5f5f5"/>
+      <rect x="728" y="208" width="200" height="96" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="736" y="214" width="20" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="746" y="223" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+      <text x="828" y="242" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Aurora PostgreSQL</text>
+      <text x="828" y="258" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Serverless v2 · min 0 ACU</text>
+      <text x="828" y="272" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RLS · pgvector · PostGIS · FTS</text>
+      <text x="828" y="286" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">runs · steps · memory · proposals</text>
+
+      <!-- Node: Bedrock Guardrails -->
+      <rect x="1016" y="72" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="1016" y="72" width="200" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="1024" y="78" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="1041" y="87" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GUARD</text>
+      <text x="1116" y="108" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bedrock Guardrails</text>
+      <text x="1116" y="124" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">prompt attack · PII · grounding</text>
+
+      <!-- Node: Bedrock models -->
+      <rect x="1016" y="208" width="200" height="96" rx="6" fill="#f5f5f5"/>
+      <rect x="1016" y="208" width="200" height="96" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="1024" y="214" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="1034" y="223" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AI</text>
+      <text x="1116" y="242" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bedrock models</text>
+      <text x="1116" y="258" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Claude Haiku · eu. profile</text>
+      <text x="1116" y="272" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Titan Text Embeddings V2</text>
+      <text x="1116" y="286" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">invocation logging off</text>
+
+      <!-- Node: SQS with three queues -->
+      <rect x="264" y="352" width="144" height="208" rx="6" fill="#f5f5f5"/>
+      <rect x="264" y="352" width="144" height="208" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="272" y="358" width="20" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="282" y="367" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">Q</text>
+      <text x="336" y="372" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SQS</text>
+      <line x1="272" y1="384" x2="400" y2="384" stroke="rgba(79,93,117,0.25)" stroke-width="0.8"/>
+      <line x1="272" y1="436" x2="400" y2="436" stroke="rgba(79,93,117,0.25)" stroke-width="0.8"/>
+      <line x1="272" y1="492" x2="400" y2="492" stroke="rgba(79,93,117,0.25)" stroke-width="0.8"/>
+      <text x="276" y="409" fill="#2d3142" font-size="9" font-family="'Geist Mono', monospace">agents</text>
+      <text x="276" y="421" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">1 msg = 1 step</text>
+      <text x="276" y="465" fill="#2d3142" font-size="9" font-family="'Geist Mono', monospace">notify</text>
+      <text x="276" y="477" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">email via SES</text>
+      <text x="276" y="521" fill="#2d3142" font-size="9" font-family="'Geist Mono', monospace">jobs</text>
+      <text x="276" y="533" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">solver · ingestion</text>
+      <rect x="364" y="400" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8" stroke-dasharray="2,2"/>
+      <text x="380" y="409" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DLQ</text>
+      <rect x="364" y="456" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8" stroke-dasharray="2,2"/>
+      <text x="380" y="465" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DLQ</text>
+      <rect x="364" y="512" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8" stroke-dasharray="2,2"/>
+      <text x="380" y="521" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DLQ</text>
+
+      <!-- Node: Notify Lambda -->
+      <rect x="40" y="432" width="144" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="432" width="144" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="48" y="438" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="58" y="447" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">λ</text>
+      <text x="112" y="468" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Notify</text>
+      <text x="112" y="484" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SES · outside VPC</text>
+
+      <!-- Node: S3 objects -->
+      <rect x="264" y="584" width="144" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="264" y="584" width="144" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="272" y="590" width="20" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="282" y="599" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">S3</text>
+      <text x="336" y="606" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">S3 objects</text>
+      <text x="336" y="620" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">tenants/{tenant_id}/</text>
+      <rect x="272" y="630" width="62" height="16" rx="2" fill="transparent" stroke="rgba(79,93,117,0.40)" stroke-width="0.8"/>
+      <text x="303" y="641" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">documents/</text>
+      <rect x="338" y="630" width="62" height="16" rx="2" fill="transparent" stroke="rgba(79,93,117,0.40)" stroke-width="0.8"/>
+      <text x="369" y="641" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">artifacts/</text>
+
+      <!-- Node: ADOT layer -->
+      <rect x="488" y="656" width="160" height="136" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="656" width="160" height="136" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="496" y="662" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="510" y="671" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OTEL</text>
+      <text x="568" y="716" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">ADOT layer</text>
+      <text x="568" y="732" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">in every Lambda</text>
+      <text x="568" y="746" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">OTLP export</text>
+
+      <!-- Node: X-Ray -->
+      <rect x="744" y="656" width="184" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="744" y="656" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="752" y="662" width="24" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="764" y="671" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OBS</text>
+      <text x="836" y="686" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">X-Ray</text>
+      <text x="836" y="702" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">traces · Transaction Search</text>
+
+      <!-- Node: CloudWatch -->
+      <rect x="744" y="736" width="184" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="744" y="736" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="752" y="742" width="24" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="764" y="751" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OBS</text>
+      <text x="836" y="766" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CloudWatch</text>
+      <text x="836" y="782" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">metrics · logs · App Signals</text>
+
+      <!-- Node: SNS alarms -->
+      <rect x="1016" y="736" width="200" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="1016" y="736" width="200" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="1024" y="742" width="24" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="1036" y="751" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OBS</text>
+      <text x="1116" y="766" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SNS alarms</text>
+      <text x="1116" y="782" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SLO burn rate → email</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="832" x2="1240" y2="832" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="848" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+      <rect x="40" y="860" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="60" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Tenant boundary (RLS)</text>
+      <rect x="172" y="860" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="192" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">SecondChance code (Lambda)</text>
+      <rect x="296" y="860" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="316" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Queue / object store</text>
+      <rect x="424" y="860" width="14" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="444" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">AWS managed</text>
+      <rect x="512" y="860" width="14" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <text x="532" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Users</text>
+      <rect x="576" y="860" width="14" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="596" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Private network (VPC)</text>
+      <line x1="708" y1="865" x2="736" y2="865" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="744" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">HTTPS / AWS API</text>
+      <line x1="832" y1="865" x2="860" y2="865" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="868" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Tenant TX (request path)</text>
+      <line x1="992" y1="865" x2="1020" y2="865" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="1028" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Internal call</text>
+      <line x1="1104" y1="865" x2="1132" y2="865" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="1140" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Async (SQS)</text>
+    </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">ADR-003 · ADR-011</p>
+        <div class="card-header"><span class="card-dot coral"></span><h3>Isolation lives in the database</h3></div>
+        <ul>
+          <li>Every transaction, from an API request or an agent step, runs <code>SET LOCAL app.tenant_id</code> from the verified token.</li>
+          <li>RLS covers offers, chunks, agent runs, steps and memory; no tool takes <code>tenant_id</code> as an argument.</li>
+          <li>S3 keys come from the same context: <code>tenants/{tenant_id}/{area}/{id}</code>, ABAC session tag on AWS.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">ADR-001 · ADR-006 · ADR-010</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>Stateless compute, near-zero cost at rest</h3></div>
+        <ul>
+          <li>Three queues, each with a DLQ; messages carry IDs only. The agents worker runs one bounded step per message and enqueues the next after commit.</li>
+          <li>Aurora pauses at 0 ACU; no NAT Gateway. <code>xray</code> and <code>logs</code> endpoints only if ADOT export from the VPC needs them (check in P4).</li>
+          <li>Notify needs no database, so it runs outside the VPC and calls SES directly.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">ADR-012 · NFR-013</p>
+        <div class="card-header"><span class="card-dot link"></span><h3>Traced end to end, same code locally</h3></div>
+        <ul>
+          <li>One correlation ID across API, SQS attributes, agent steps and audit; no prompts in logs.</li>
+          <li>Bedrock ↔ Ollama · SQS ↔ ElasticMQ · S3 ↔ SeaweedFS · ADOT ↔ otel-lgtm.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">SecondChance v0.3 · ADR-001 to ADR-014 · region eu-central-1 · prices and model availability to verify before deploy</p>
+  </div>
+</body>
+</html>
