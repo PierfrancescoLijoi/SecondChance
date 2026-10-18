@@ -1,7 +1,7 @@
 # One Dockerfile, two Lambda targets (ADR-001, ADR-018); Compose uses the default (api).
 #   worker: SQS and scheduled handlers through awslambdaric (command chosen per function)
 #   api:    uvicorn behind the Lambda Web Adapter; outside Lambda the adapter stays inert
-FROM python:3.12.14-slim-trixie AS base
+FROM python:3.14.7-slim-trixie AS base
 COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
