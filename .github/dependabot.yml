@@ -2,7 +2,7 @@
 version: 2
 updates:
   - package-ecosystem: uv
-    directory: /api
+    directories: [/api, /mcp-gateway]
     schedule: { interval: weekly }
     cooldown: { default-days: 14 }
   - package-ecosystem: npm
@@ -14,9 +14,18 @@ updates:
     schedule: { interval: weekly }
     cooldown: { default-days: 14 }
   - package-ecosystem: docker
-    directories: [/api, /db, /web]
+    directories: [/api, /db, /web, /mcp-gateway]
     schedule: { interval: weekly }
     cooldown: { default-days: 14 }
+    # Base images follow the AWS runtimes they stand in for: Python 3.12 as on Lambda, PostgreSQL 16
+    # as on Aurora, Node on its LTS line. Moving one is a decision with an ADR, not a weekly bump.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: python
+        versions: [">= 3.13"]
+      - dependency-name: postgres
+        versions: [">= 17"]
   - package-ecosystem: terraform
     directories: [/infra/terraform/bootstrap, /infra/terraform/envs/demo, /infra/terraform/envs/pilot]
     schedule: { interval: weekly }

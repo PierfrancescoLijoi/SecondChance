@@ -159,8 +159,12 @@ def stack():
     jwk = jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key(), as_dict=True) | {"kid": "emulation", "alg": "RS256", "use": "sig"}
     env = os.environ | {"SECONDCHANCE_EMULATION_JWKS": json.dumps({"keys": [jwk]})}
     _compose("down", "-v", "--remove-orphans", env=env)
-    started = _compose("up", "-d", "--wait", env=env)
-    if started.returncode:
+    for attempt in range(3):  # image pulls can be throttled (HTTP 429) when CI runs start together
+        started = _compose("up", "-d", "--wait", env=env)
+        if started.returncode == 0:
+            break
+        time.sleep(20 * (attempt + 1))
+    else:
         pytest.fail(f"the emulated environment did not start:\n{started.stderr}")
     emulated = Stack(key)
     emulated.prepare()
