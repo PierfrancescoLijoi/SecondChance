@@ -1,0 +1,44 @@
+name: Deploy
+
+# Manual only. The AWS role trusts this repository's 'production' environment, which should
+# require a reviewer: no AWS secret is stored in GitHub (ADR-018).
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [demo, pilot]
+        default: demo
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Deploy
+        env:
+          TARGET: ${{ inputs.environment }}
+          SECONDCHANCE_ALARM_EMAIL: ${{ vars.SECONDCHANCE_ALARM_EMAIL }}
+          SECONDCHANCE_AUTO_APPROVE: "1"
+        run: scripts/deploy.sh "$TARGET"

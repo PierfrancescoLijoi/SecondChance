@@ -1,0 +1,2 @@
+# Files mounted into Linux containers must keep LF endings on Windows checkouts.
+* text=auto eol=lf

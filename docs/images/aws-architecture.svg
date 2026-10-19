@@ -1,0 +1,320 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1300" viewBox="0 0 1920 1300" role="img" aria-labelledby="t d">
+<title id="t">SecondChance on AWS</title>
+<desc id="d">Deployed AWS architecture of SecondChance as defined in infra/terraform/modules/secondchance: CloudFront with WAF, API Gateway HTTP and WebSocket APIs, Cognito, Lambda functions inside a private VPC without NAT, RDS Proxy and Aurora PostgreSQL, SQS, Step Functions, EventBridge Scheduler, DynamoDB, S3, Bedrock, SES and the cross-cutting security, observability and delivery services.</desc>
+<defs>
+<marker id="a-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#232F3E"/></marker>
+<marker id="a-agent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ED7100"/></marker>
+<marker id="a-db" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C925D1"/></marker>
+<marker id="a-rt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8C4FFF"/></marker>
+<marker id="a-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B7280"/></marker>
+</defs>
+<rect width="1920" height="1300" fill="#FFFFFF"/>
+<text x="30" y="46" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="800" fill="#16191F" text-anchor="start" >SecondChance on AWS</text>
+<text x="30" y="74" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#4B5563" text-anchor="start" >Deployed view of infra/terraform/modules/secondchance · eu-central-1 · every arrow is a call the module's IAM policies allow</text>
+<rect x="1215" y="26" width="675" height="64" rx="8" fill="#F9FAFB" stroke="#D1D5DB"/>
+<path d="M 1231 48 L 1265 48" fill="none" stroke="#232F3E" stroke-width="1.8" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="1273" y="52" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >synchronous call / invocation</text>
+<path d="M 1231 72 L 1265 72" fill="none" stroke="#232F3E" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="1273" y="76" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >asynchronous: queue, schedule</text>
+<path d="M 1455 48 L 1489 48" fill="none" stroke="#ED7100" stroke-width="1.8" marker-end="url(#a-agent)" stroke-linejoin="round"/>
+<text x="1497" y="52" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >governed agent path</text>
+<path d="M 1455 72 L 1489 72" fill="none" stroke="#C925D1" stroke-width="1.8" marker-end="url(#a-db)" stroke-linejoin="round"/>
+<text x="1497" y="76" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >database connection (IAM token)</text>
+<path d="M 1685 48 L 1719 48" fill="none" stroke="#8C4FFF" stroke-width="1.8" marker-end="url(#a-rt)" stroke-linejoin="round"/>
+<text x="1727" y="52" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >real-time return path</text>
+<path d="M 1685 72 L 1719 72" fill="none" stroke="#6B7280" stroke-width="1.8" stroke-dasharray="2 3" marker-end="url(#a-soft)" stroke-linejoin="round"/>
+<text x="1727" y="76" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >configuration / attachment</text>
+<rect x="30" y="250" width="170" height="400" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/>
+<text x="46" y="274" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#6B7280" text-anchor="start" letter-spacing="0.6">USERS</text>
+<text x="46" y="296" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#16191F" text-anchor="start" >Browser</text>
+<text x="46" y="315" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4B5563" text-anchor="start" >React SPA, one origin</text>
+<text x="46" y="350" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#6B7280" text-anchor="start" >roles (from membership):</text>
+<text x="56" y="372" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >donor</text>
+<text x="56" y="391" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >volunteer</text>
+<text x="56" y="410" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >coordinator</text>
+<text x="56" y="429" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >org_admin</text>
+<text x="56" y="448" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >center_staff</text>
+<text x="56" y="467" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#16191F" text-anchor="start" >platform_admin</text>
+<text x="46" y="510" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#6B7280" text-anchor="start" >The token proves who;</text>
+<text x="46" y="526" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#6B7280" text-anchor="start" >Aurora decides what.</text>
+<rect x="235" y="110" width="235" height="275" rx="12" fill="none" stroke="#9CA3AF" stroke-width="1.3" stroke-dasharray="6 5"/>
+<text x="249" y="130" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#4B5563" text-anchor="start" letter-spacing="1">EDGE · GLOBAL</text>
+<rect x="250" y="140" width="205" height="82" rx="8" fill="#FDF1F3" stroke="#DD344C" stroke-width="1.4"/>
+<rect x="250" y="140" width="5" height="82" rx="2" fill="#DD344C"/>
+<text x="264" y="157" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#DD344C" text-anchor="start" letter-spacing="0.6">SECURITY · US-EAST-1</text>
+<text x="264" y="175" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >AWS WAF</text>
+<text x="264" y="192" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >web ACL on the distribution</text>
+<text x="264" y="207" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >managed rules · 1000 req/5 min/IP</text>
+<rect x="250" y="245" width="205" height="128" rx="8" fill="#F6F1FF" stroke="#8C4FFF" stroke-width="1.4"/>
+<rect x="250" y="245" width="5" height="128" rx="2" fill="#8C4FFF"/>
+<text x="264" y="262" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#8C4FFF" text-anchor="start" letter-spacing="0.6">CONTENT DELIVERY</text>
+<text x="264" y="280" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >Amazon CloudFront</text>
+<text x="264" y="297" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >/* → S3 web (OAC)</text>
+<text x="264" y="312" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >/api/* → HTTP API, no cache</text>
+<text x="264" y="327" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >functions: spa · strip-api</text>
+<text x="264" y="342" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >CSP · HSTS · frame DENY</text>
+<path d="M 352 222 L 352 245" fill="none" stroke="#6B7280" stroke-width="1.4" stroke-dasharray="2 3" stroke-linejoin="round"/>
+<text x="360" y="238" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="400" fill="#6B7280" text-anchor="start" >attached</text>
+<rect x="490" y="100" width="1415" height="945" rx="12" fill="none" stroke="#232F3E" stroke-width="1.3" stroke-dasharray="8 5"/>
+<text x="504" y="120" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#16191F" text-anchor="start" letter-spacing="1">AWS REGION · eu-central-1 (Frankfurt)</text>
+<rect x="520" y="150" width="220" height="72" rx="8" fill="#F5F9EC" stroke="#7AA116" stroke-width="1.4"/>
+<rect x="520" y="150" width="5" height="72" rx="2" fill="#7AA116"/>
+<text x="534" y="167" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#7AA116" text-anchor="start" letter-spacing="0.6">STORAGE</text>
+<text x="534" y="185" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >S3 · web bucket</text>
+<text x="534" y="202" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >SPA build + config.json</text>
+<text x="534" y="217" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >read only via CloudFront OAC</text>
+<rect x="520" y="240" width="220" height="92" rx="8" fill="#F6F1FF" stroke="#8C4FFF" stroke-width="1.4"/>
+<rect x="520" y="240" width="5" height="92" rx="2" fill="#8C4FFF"/>
+<text x="534" y="257" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#8C4FFF" text-anchor="start" letter-spacing="0.6">NETWORKING</text>
+<text x="534" y="275" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >API Gateway · HTTP API</text>
+<text x="534" y="292" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >JWT authorizer: Cognito issuer</text>
+<text x="534" y="307" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >throttle 50 rps · burst 100</text>
+<text x="534" y="322" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >GET /health without token</text>
+<rect x="520" y="350" width="220" height="92" rx="8" fill="#F6F1FF" stroke="#8C4FFF" stroke-width="1.4"/>
+<rect x="520" y="350" width="5" height="92" rx="2" fill="#8C4FFF"/>
+<text x="534" y="367" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#8C4FFF" text-anchor="start" letter-spacing="0.6">NETWORKING</text>
+<text x="534" y="385" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >API Gateway · WebSocket</text>
+<text x="534" y="402" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >$connect: Lambda authorizer</text>
+<text x="534" y="417" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >routes → λ realtime</text>
+<text x="534" y="432" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >@connections ← publisher</text>
+<rect x="520" y="462" width="220" height="62" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="520" y="462" width="5" height="62" rx="2" fill="#ED7100"/>
+<text x="534" y="479" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · OUTSIDE VPC · NO DATA</text>
+<text x="534" y="497" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >λ realtime-authorizer</text>
+<text x="534" y="516" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >JWT check with JWKS in env</text>
+<rect x="520" y="545" width="220" height="100" rx="8" fill="#FDF1F3" stroke="#DD344C" stroke-width="1.4"/>
+<rect x="520" y="545" width="5" height="100" rx="2" fill="#DD344C"/>
+<text x="534" y="562" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#DD344C" text-anchor="start" letter-spacing="0.6">IDENTITY</text>
+<text x="534" y="580" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >Amazon Cognito</text>
+<text x="534" y="597" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >user pool · Hosted UI</text>
+<text x="534" y="612" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >code + PKCE · MFA optional</text>
+<text x="534" y="627" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >JWKS copied to env at apply</text>
+<rect x="520" y="665" width="220" height="80" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="520" y="665" width="5" height="80" rx="2" fill="#ED7100"/>
+<text x="534" y="682" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · OUTSIDE VPC · NO DATA</text>
+<text x="534" y="700" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >λ notifier</text>
+<text x="534" y="717" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >← SQS notify (ids only)</text>
+<text x="534" y="732" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >address by sub · fixed template</text>
+<rect x="520" y="765" width="220" height="62" rx="8" fill="#FDF1F3" stroke="#DD344C" stroke-width="1.4"/>
+<rect x="520" y="765" width="5" height="62" rx="2" fill="#DD344C"/>
+<text x="534" y="782" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#DD344C" text-anchor="start" letter-spacing="0.6">EMAIL</text>
+<text x="534" y="800" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Amazon SES</text>
+<text x="534" y="817" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >one verified sender identity</text>
+<rect x="520" y="850" width="220" height="80" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="520" y="850" width="5" height="80" rx="2" fill="#ED7100"/>
+<text x="534" y="867" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · OUTSIDE VPC · NO DATA</text>
+<text x="534" y="885" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >λ realtime-publisher</text>
+<text x="534" y="902" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >← SQS realtime-events</text>
+<text x="534" y="917" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >DynamoDB → PostToConnection</text>
+<text x="520" y="955" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#6B7280" text-anchor="start" >Outside the VPC, no data access:</text>
+<text x="520" y="970" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#6B7280" text-anchor="start" >reach Cognito, SES, @connections</text>
+<rect x="790" y="140" width="690" height="845" rx="12" fill="#FBFDF7" stroke="#7AA116" stroke-width="1.3" stroke-dasharray="6 5"/>
+<text x="804" y="160" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#4D6B0E" text-anchor="start" letter-spacing="1">VPC 10.40.0.0/16 · PRIVATE SUBNETS IN 2 AZ · NO IGW · NO NAT</text>
+<rect x="825" y="185" width="180" height="115" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="825" y="185" width="5" height="115" rx="2" fill="#ED7100"/>
+<text x="839" y="202" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="839" y="220" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ api</text>
+<text x="839" y="237" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >FastAPI · Web Adapter</text>
+<text x="839" y="252" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >JWT + membership + quotas</text>
+<text x="839" y="267" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >→ S3 · SQS · SFN · Bedrock</text>
+<rect x="825" y="345" width="180" height="100" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="825" y="345" width="5" height="100" rx="2" fill="#ED7100"/>
+<text x="839" y="362" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="839" y="380" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ realtime</text>
+<text x="839" y="397" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >$connect · $disconnect</text>
+<text x="839" y="412" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >active member + run owner</text>
+<text x="839" y="427" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >→ DynamoDB connections</text>
+<rect x="1260" y="185" width="175" height="55" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="1260" y="185" width="5" height="55" rx="2" fill="#ED7100"/>
+<text x="1274" y="204" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#16191F" text-anchor="start" >λ retention · requeue</text>
+<text x="1274" y="221" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >recovery · outbox · expiry</text>
+<rect x="1260" y="248" width="175" height="52" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="1260" y="248" width="5" height="52" rx="2" fill="#ED7100"/>
+<text x="1274" y="267" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#16191F" text-anchor="start" >λ migrate</text>
+<text x="1274" y="284" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >deploy only · bootstrap roles</text>
+<rect x="1260" y="340" width="175" height="115" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="1260" y="340" width="5" height="115" rx="2" fill="#ED7100"/>
+<text x="1274" y="357" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="1274" y="375" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ jobs</text>
+<text x="1274" y="392" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >PDF parse · chunk · embed</text>
+<text x="1274" y="407" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >OR-Tools CP-SAT matching</text>
+<text x="1274" y="422" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >writes SHA-256 proposals</text>
+<rect x="812" y="490" width="640" height="172" rx="10" fill="none" stroke="#ED7100" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="826" y="508" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="10.5" font-weight="700" fill="#ED7100" text-anchor="start" letter-spacing="0.6">GOVERNED AGENT TOOL PATH · AI PROPOSES, PEOPLE DECIDE</text>
+<rect x="825" y="520" width="180" height="128" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="825" y="520" width="5" height="128" rx="2" fill="#ED7100"/>
+<text x="839" y="537" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="839" y="555" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ tool-executor</text>
+<text x="839" y="572" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >caller = active run step</text>
+<text x="839" y="587" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >requester identity + RLS</text>
+<text x="839" y="602" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >read-only tools</text>
+<text x="839" y="617" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >→ Bedrock embeddings</text>
+<rect x="1040" y="520" width="180" height="128" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="1040" y="520" width="5" height="128" rx="2" fill="#ED7100"/>
+<text x="1054" y="537" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="1054" y="555" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ mcp-gateway</text>
+<text x="1054" y="572" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >agent + role allow-list</text>
+<text x="1054" y="587" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >schema · quota · audit</text>
+<text x="1054" y="602" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >own role, logs, bulkhead</text>
+<text x="1054" y="617" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >no database access</text>
+<rect x="1260" y="520" width="175" height="128" rx="8" fill="#FFF7EF" stroke="#ED7100" stroke-width="1.4"/>
+<rect x="1260" y="520" width="5" height="128" rx="2" fill="#ED7100"/>
+<text x="1274" y="537" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#ED7100" text-anchor="start" letter-spacing="0.6">LAMBDA · IN VPC</text>
+<text x="1274" y="555" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >λ agent-step</text>
+<text x="1274" y="572" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >one bounded turn</text>
+<text x="1274" y="587" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >supervisor · specialists</text>
+<text x="1274" y="602" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >→ Bedrock · SQS events</text>
+<text x="1274" y="617" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >12 steps · 60k tokens</text>
+<rect x="825" y="700" width="395" height="70" rx="8" fill="#FCF1FD" stroke="#C925D1" stroke-width="1.4"/>
+<rect x="825" y="700" width="5" height="70" rx="2" fill="#C925D1"/>
+<text x="839" y="717" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#C925D1" text-anchor="start" letter-spacing="0.6">DATABASE</text>
+<text x="839" y="735" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >Amazon RDS Proxy</text>
+<text x="839" y="752" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >IAM auth end to end · TLS required · pool max 80 %</text>
+<rect x="825" y="815" width="610" height="150" rx="8" fill="#FCF1FD" stroke="#C925D1" stroke-width="1.4"/>
+<rect x="825" y="815" width="5" height="150" rx="2" fill="#C925D1"/>
+<text x="839" y="832" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#C925D1" text-anchor="start" letter-spacing="0.6">DATABASE</text>
+<text x="839" y="850" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16191F" text-anchor="start" >Aurora PostgreSQL Serverless v2</text>
+<text x="839" y="867" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4B5563" text-anchor="start" >RLS on every tenant table · DB users app, maintenance, migrator (IAM tokens, no BYPASSRLS)</text>
+<text x="839" y="882.5" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4B5563" text-anchor="start" >pgvector · full-text en/da/pl/it · PostGIS</text>
+<text x="839" y="898.0" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4B5563" text-anchor="start" >runs, steps, agent memory · immutable SHA-256 proposals · email outbox · audit</text>
+<text x="839" y="913.5" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4B5563" text-anchor="start" >KMS at rest · master secret in Secrets Manager · pilot: reader in the second AZ</text>
+<rect x="1446" y="185" width="26" height="780" rx="6" fill="#F6F1FF" stroke="#8C4FFF" stroke-width="1.2"/>
+<text x="1463" y="575" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="10.5" font-weight="600" fill="#8C4FFF" text-anchor="middle" transform="rotate(-90 1463 575)" letter-spacing="0.3">VPC ENDPOINTS · interface: sqs · bedrock-runtime · secretsmanager · lambda · states  ·  gateway: s3 · dynamodb</text>
+<rect x="1520" y="180" width="335" height="60" rx="8" fill="#FEF1F7" stroke="#E7157B" stroke-width="1.4"/>
+<rect x="1520" y="180" width="5" height="60" rx="2" fill="#E7157B"/>
+<text x="1534" y="197" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#E7157B" text-anchor="start" letter-spacing="0.6">APP INTEGRATION</text>
+<text x="1534" y="215" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >EventBridge Scheduler</text>
+<text x="1534" y="233" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >retention 03:15 UTC daily · requeue every 2 min</text>
+<rect x="1520" y="250" width="335" height="55" rx="8" fill="#FDF1F3" stroke="#DD344C" stroke-width="1.4"/>
+<rect x="1520" y="250" width="5" height="55" rx="2" fill="#DD344C"/>
+<text x="1534" y="269" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Secrets Manager</text>
+<text x="1534" y="286" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >Aurora master secret · read by λ migrate only</text>
+<rect x="1520" y="330" width="335" height="140" rx="8" fill="#FEF1F7" stroke="#E7157B" stroke-width="1.4"/>
+<rect x="1520" y="330" width="5" height="140" rx="2" fill="#E7157B"/>
+<text x="1534" y="347" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#E7157B" text-anchor="start" letter-spacing="0.6">APP INTEGRATION</text>
+<text x="1534" y="365" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Amazon SQS · DLQ after 5 receives</text>
+<rect x="1534" y="374" width="308" height="24" rx="5" fill="#FFFFFF" stroke="#E7157B" stroke-width="1"/>
+<text x="1542" y="390" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#16191F" text-anchor="start" >jobs</text>
+<text x="1662" y="390" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="10" font-weight="400" fill="#4B5563" text-anchor="start" >← api, requeue → λ jobs</text>
+<rect x="1534" y="402" width="308" height="24" rx="5" fill="#FFFFFF" stroke="#E7157B" stroke-width="1"/>
+<text x="1542" y="418" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#16191F" text-anchor="start" >notify</text>
+<text x="1662" y="418" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="10" font-weight="400" fill="#4B5563" text-anchor="start" >← api, requeue → λ notifier</text>
+<rect x="1534" y="430" width="308" height="24" rx="5" fill="#FFFFFF" stroke="#E7157B" stroke-width="1"/>
+<text x="1542" y="446" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#16191F" text-anchor="start" >realtime-events</text>
+<text x="1662" y="446" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="10" font-weight="400" fill="#4B5563" text-anchor="start" >← agent-step → λ publisher</text>
+<rect x="1520" y="495" width="335" height="120" rx="8" fill="#FEF1F7" stroke="#E7157B" stroke-width="1.4"/>
+<rect x="1520" y="495" width="5" height="120" rx="2" fill="#E7157B"/>
+<text x="1534" y="512" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#E7157B" text-anchor="start" letter-spacing="0.6">APP INTEGRATION</text>
+<text x="1534" y="530" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Step Functions · Standard</text>
+<text x="1534" y="547" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >loop: invoke agent-step → wait 30 s on lease</text>
+<text x="1534" y="562" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >→ continue or succeed · 6 retries per step</text>
+<text x="1534" y="577" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >started by api · requeue (start / redrive)</text>
+<text x="1534" y="592" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >logs without execution data</text>
+<rect x="1520" y="640" width="335" height="90" rx="8" fill="#FCF1FD" stroke="#C925D1" stroke-width="1.4"/>
+<rect x="1520" y="640" width="5" height="90" rx="2" fill="#C925D1"/>
+<text x="1534" y="657" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#C925D1" text-anchor="start" letter-spacing="0.6">DATABASE</text>
+<text x="1534" y="675" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Amazon DynamoDB · on demand · KMS</text>
+<text x="1534" y="692" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >mcp-rate-limit ← mcp-gateway (1-min window)</text>
+<text x="1534" y="707" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >realtime-connections ← realtime, publisher</text>
+<rect x="1520" y="746" width="335" height="92" rx="8" fill="#F5F9EC" stroke="#7AA116" stroke-width="1.4"/>
+<rect x="1520" y="746" width="5" height="92" rx="2" fill="#7AA116"/>
+<text x="1534" y="763" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#7AA116" text-anchor="start" letter-spacing="0.6">STORAGE</text>
+<text x="1534" y="781" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >S3 · objects bucket</text>
+<text x="1534" y="798" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >tenants/{tenant}/ · SSE-KMS · versioned · ← api, jobs</text>
+<text x="1534" y="813" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >GuardDuty malware scan: infected files unreadable</text>
+<rect x="1520" y="850" width="335" height="125" rx="8" fill="#ECFAF7" stroke="#01A88D" stroke-width="1.4"/>
+<rect x="1520" y="850" width="5" height="125" rx="2" fill="#01A88D"/>
+<text x="1534" y="867" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="9.5" font-weight="600" fill="#01A88D" text-anchor="start" letter-spacing="0.6">MACHINE LEARNING</text>
+<text x="1534" y="885" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#16191F" text-anchor="start" >Amazon Bedrock</text>
+<text x="1534" y="902" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >Claude Haiku · eu. inference profile (Converse)</text>
+<text x="1534" y="917" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >Titan Text Embeddings V2</text>
+<text x="1534" y="932" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >Guardrails: prompt attack · PII · grounding</text>
+<text x="1534" y="947" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4B5563" text-anchor="start" >← api, jobs, agent-step, tool-executor</text>
+<path d="M 200 300 L 250 300" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="207" y="292" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >HTTPS</text>
+<path d="M 455 272 L 478 272 L 478 186 L 520 186" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="462" y="266" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#232F3E" text-anchor="start" >OAC</text>
+<path d="M 455 310 L 520 310" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="470" y="304" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >/api/*</text>
+<path d="M 200 405 L 520 405" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="262" y="399" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >wss · token in subprotocol</text>
+<path d="M 200 590 L 520 590" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="262" y="584" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >OIDC code + PKCE (Hosted UI)</text>
+<path d="M 630 442 L 630 462" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="638" y="456" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#232F3E" text-anchor="start" >$connect</text>
+<path d="M 600 665 L 600 645" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="608" y="659" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#232F3E" text-anchor="start" >ListUsers by sub</text>
+<path d="M 600 745 L 600 765" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="608" y="759" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#232F3E" text-anchor="start" >SendEmail (sender only)</text>
+<path d="M 520 895 L 504 895 L 504 428 L 520 428" fill="none" stroke="#8C4FFF" stroke-width="1.6" marker-end="url(#a-rt)" stroke-linejoin="round"/>
+<text x="498" y="700" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#8C4FFF" text-anchor="middle" transform="rotate(-90 498 700)">PostToConnection</text>
+<path d="M 740 285 L 825 285" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="750" y="279" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >proxy</text>
+<path d="M 740 405 L 825 405" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="750" y="399" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >routes</text>
+<path d="M 1005 255 L 1022 255 L 1022 316 L 1600 316 L 1600 330" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="1032" y="310" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >SendMessage → jobs, notify</text>
+<path d="M 1022 316 L 1022 482 L 1700 482 L 1700 495" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="1032" y="476" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >StartExecution</text>
+<path d="M 1520 212 L 1435 212" fill="none" stroke="#232F3E" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<path d="M 1435 274 L 1520 274" fill="none" stroke="#232F3E" stroke-width="1.6" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<path d="M 1534 392 L 1435 392" fill="none" stroke="#232F3E" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<path d="M 1520 575 L 1435 575" fill="none" stroke="#ED7100" stroke-width="2.2" marker-end="url(#a-agent)" stroke-linejoin="round"/>
+<path d="M 1260 584 L 1220 584" fill="none" stroke="#ED7100" stroke-width="2.2" marker-end="url(#a-agent)" stroke-linejoin="round"/>
+<path d="M 1040 584 L 1005 584" fill="none" stroke="#ED7100" stroke-width="2.2" marker-end="url(#a-agent)" stroke-linejoin="round"/>
+<path d="M 1130 648 L 1130 680 L 1520 680" fill="none" stroke="#ED7100" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#a-agent)" stroke-linejoin="round"/>
+<text x="1252" y="674" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#ED7100" text-anchor="start" >quota: conditional UpdateItem</text>
+<path d="M 1435 535 L 1500 535 L 1500 448 L 1534 448" fill="none" stroke="#8C4FFF" stroke-width="1.6" marker-end="url(#a-rt)" stroke-linejoin="round"/>
+<text x="1494" y="505" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#8C4FFF" text-anchor="middle" transform="rotate(-90 1494 505)">events</text>
+<path d="M 825 200 L 812 200" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 825 365 L 812 365" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 825 630 L 812 630" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 812 200 L 812 735" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 812 735 L 825 735" fill="none" stroke="#C925D1" stroke-width="1.6" marker-end="url(#a-db)" stroke-linejoin="round"/>
+<path d="M 1260 226 L 1240 226" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 1260 290 L 1240 290" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 1260 445 L 1240 445" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 1260 640 L 1240 640" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 1240 226 L 1240 735" fill="none" stroke="#C925D1" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M 1240 735 L 1220 735" fill="none" stroke="#C925D1" stroke-width="1.6" marker-end="url(#a-db)" stroke-linejoin="round"/>
+<path d="M 1022 770 L 1022 815" fill="none" stroke="#C925D1" stroke-width="2.2" marker-end="url(#a-db)" stroke-linejoin="round"/>
+<text x="1032" y="797" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#C925D1" text-anchor="start" >IAM auth · TLS</text>
+<path d="M 1842 420 L 1872 420 L 1872 1005 L 770 1005 L 770 705 L 740 705" fill="none" stroke="#232F3E" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a-slate)" stroke-linejoin="round"/>
+<text x="1300" y="999" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#232F3E" text-anchor="start" >notify → λ notifier</text>
+<path d="M 1842 448 L 1888 448 L 1888 1025 L 755 1025 L 755 890 L 740 890" fill="none" stroke="#8C4FFF" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a-rt)" stroke-linejoin="round"/>
+<text x="1300" y="1019" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8C4FFF" text-anchor="start" >realtime-events → λ realtime-publisher</text>
+<rect x="30" y="1065" width="455" height="200" rx="10" fill="#F9FAFB" stroke="#D1D5DB"/>
+<rect x="30" y="1065" width="455" height="5" rx="2" fill="#DD344C"/>
+<text x="46" y="1094" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#DD344C" text-anchor="start" letter-spacing="1">SECURITY</text>
+<text x="46" y="1120" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >KMS: one CMK with rotation for Aurora, the master secret,</text>
+<text x="46" y="1147" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >S3 objects, logs, DynamoDB, SNS, ECR and the audit trail</text>
+<text x="46" y="1174" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >IAM: one role per Lambda family; rds-db:connect to its own</text>
+<text x="46" y="1201" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >database user only; scheduler invokes retention + requeue only</text>
+<text x="46" y="1228" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >CloudTrail: multi-region, validated files, S3 object events</text>
+<text x="46" y="1255" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >GuardDuty + malware scan; jobs parse only clean uploads</text>
+<rect x="500" y="1065" width="455" height="200" rx="10" fill="#F9FAFB" stroke="#D1D5DB"/>
+<rect x="500" y="1065" width="455" height="5" rx="2" fill="#E7157B"/>
+<text x="516" y="1094" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#E7157B" text-anchor="start" letter-spacing="1">OBSERVABILITY AND COST</text>
+<text x="516" y="1120" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >CloudWatch Logs: 30 days, KMS, no PII in access logs</text>
+<text x="516" y="1147" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Alarms: API 5xx and p95, Lambda errors and throttles, DLQ,</text>
+<text x="516" y="1174" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >queue age, Step Functions failures, MCP denials, GuardDuty → SNS</text>
+<text x="516" y="1201" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >X-Ray active tracing on Lambda and Step Functions; OTLP optional</text>
+<text x="516" y="1228" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >AWS Budgets: account-wide monthly alert (30 / 150 USD)</text>
+<rect x="970" y="1065" width="455" height="200" rx="10" fill="#F9FAFB" stroke="#D1D5DB"/>
+<rect x="970" y="1065" width="455" height="5" rx="2" fill="#232F3E"/>
+<text x="986" y="1094" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#232F3E" text-anchor="start" letter-spacing="1">DELIVERY</text>
+<text x="986" y="1120" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >GitHub Actions 'production' → OIDC → STS → deploy role</text>
+<text x="986" y="1147" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >with permission boundary (no users, keys or account changes)</text>
+<text x="986" y="1174" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Terraform state: S3 + KMS, native S3 locking</text>
+<text x="986" y="1201" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >ECR: immutable tags, scan on push (api, worker, gateway)</text>
+<text x="986" y="1228" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >deploy.sh: apply → λ migrate → S3 sync → CloudFront invalidation</text>
+<rect x="1440" y="1065" width="430" height="200" rx="10" fill="#F9FAFB" stroke="#D1D5DB"/>
+<rect x="1440" y="1065" width="430" height="5" rx="2" fill="#ED7100"/>
+<text x="1456" y="1094" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#ED7100" text-anchor="start" letter-spacing="1">DEMO vs PILOT</text>
+<text x="1456" y="1120" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Aurora: 0–2 ACU, 1 instance  |  0.5–8 ACU, writer + reader</text>
+<text x="1456" y="1147" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Reserved concurrency: none  |  api 20 · mcp-gateway 5</text>
+<text x="1456" y="1174" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >requeue: hourly  |  every 2 minutes</text>
+<text x="1456" y="1201" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Backups 7 days  |  14 days, deletion protection, PITR</text>
+<text x="1456" y="1228" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#16191F" text-anchor="start" >Both: same module, same images, eu-central-1</text>
+<text x="30" y="1288" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#6B7280" text-anchor="start" >Source: infra/terraform/modules/secondchance (network, edge, identity, compute, data, storage, queues, orchestration, realtime, ai, notifications, observability, detection). Local equivalents: infra/README.md.</text>
+</svg>

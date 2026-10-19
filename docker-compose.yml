@@ -1,0 +1,212 @@
+name: secondchance
+
+# Local stack (NFR-013): no AWS needed. Passwords below are for this machine only,
+# and every port is bound to 127.0.0.1.
+#   docker compose up -d                                    core stack
+#   docker compose --profile observability up -d            + Grafana LGTM on :3000
+
+x-aws-local: &aws-local
+  AWS_REGION: eu-central-1
+  AWS_ACCESS_KEY_ID: local
+  AWS_SECRET_ACCESS_KEY: local
+  SECONDCHANCE_SQS_ENDPOINT: http://queue:9324
+  SECONDCHANCE_S3_ENDPOINT: http://storage:8333
+  SECONDCHANCE_S3_BUCKET: secondchance-local
+
+x-app: &app
+  SECONDCHANCE_DATABASE_URL: postgresql+psycopg://secondchance_app:app-local-only@db:5432/secondchance
+  SECONDCHANCE_WEB_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+  SECONDCHANCE_JWT_SECRET: local-dev-only-secret-0123456789abcdef
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_SEMCONV_STABILITY_OPT_IN: http
+
+services:
+  db:
+    build: ./db
+    image: secondchance-db:16
+    environment:
+      POSTGRES_PASSWORD: postgres-local-only
+      POSTGRES_DB: secondchance
+      SECONDCHANCE_MIGRATOR_PASSWORD: migrator-local-only
+      SECONDCHANCE_APP_PASSWORD: app-local-only
+      SECONDCHANCE_MAINTENANCE_PASSWORD: maintenance-local-only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./db/bootstrap.sql:/docker-entrypoint-initdb.d/20-secondchance.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # TCP, not the socket: the init-time server only listens on the socket,
+      # so this turns healthy once bootstrap.sql has run.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d secondchance"]
+      interval: 2s
+      retries: 60
+
+  queue:
+    # SQS-compatible stand-in for the jobs/notify/agents queues and their DLQs.
+    image: softwaremill/elasticmq-native:1.7.1
+    volumes:
+      - ./local/elasticmq.conf:/opt/elasticmq.conf:ro
+    ports:
+      - "127.0.0.1:9324:9324"
+
+  storage:
+    # S3-compatible object store (ADR-011); MinIO is archived.
+    image: chrislusf/seaweedfs:4.48
+    command: server -s3 -dir=/data -master.volumeSizeLimitMB=256
+    volumes:
+      - objects:/data
+    ports:
+      - "127.0.0.1:8333:8333"
+
+  # One-shot, and the only service holding the migrator credentials (ADR-003). The demo
+  # documents go through the normal upload and ingestion code, with the app role.
+  migrate:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: *aws-local
+      SECONDCHANCE_MIGRATOR_URL: postgresql+psycopg://secondchance_migrator:migrator-local-only@db:5432/secondchance
+      SECONDCHANCE_DATABASE_URL: postgresql+psycopg://secondchance_app:app-local-only@db:5432/secondchance
+    command: >-
+      sh -c "alembic upgrade head && python -m secondchance.seed && python -m secondchance.storage
+      && python -m secondchance.knowledge.sample"
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+
+  api:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: [*aws-local, *app]
+      OTEL_SERVICE_NAME: secondchance-api
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      queue:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      retries: 40
+
+  # Stateless: scale with `docker compose up -d --scale agents-worker=3` (ADR-010).
+  agents-worker:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: [*aws-local, *app]
+      OTEL_SERVICE_NAME: secondchance-agents-worker
+      SECONDCHANCE_ROUTER_SHADOW_URL: ${SECONDCHANCE_ROUTER_SHADOW_URL:-}
+      SECONDCHANCE_MCP_GATEWAY_URL: http://mcp-gateway:8010
+    command: python -m secondchance.agents.worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      queue:
+        condition: service_started
+      mcp-gateway:
+        condition: service_healthy
+
+  # Independent policy enforcement point: allow-list, validation, rate limits and audit logs.
+  mcp-gateway:
+    build:
+      context: ./mcp-gateway
+      target: service
+    image: secondchance-mcp-gateway:local
+    environment:
+      SECONDCHANCE_TOOL_EXECUTOR_URL: http://tool-executor:8020
+    ports:
+      - "127.0.0.1:8010:8010"
+    depends_on:
+      tool-executor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
+      interval: 3s
+      retries: 40
+
+  # Domain execution remains private: no host port and no public API route.
+  tool-executor:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: [*aws-local, *app]
+      OTEL_SERVICE_NAME: secondchance-tool-executor
+    command: uvicorn secondchance.tool_executor_app:app --host 0.0.0.0 --port 8020
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8020/health')"]
+      interval: 3s
+      retries: 40
+
+  # The web app (React) on http://localhost:8088, with the API proxied at /api.
+  web:
+    build: ./web
+    image: secondchance-web:local
+    ports:
+      - "127.0.0.1:8088:8080"
+    depends_on:
+      api:
+        condition: service_started
+
+  # PDF ingestion and the OR-Tools matching solver (queue `jobs`, FR-021).
+  jobs-worker:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: [*aws-local, *app]
+      OTEL_SERVICE_NAME: secondchance-jobs-worker
+    command: python -m secondchance.jobs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      queue:
+        condition: service_started
+
+  # FR-026: consumes `notify` like the notifier Lambda on AWS, without database access. Synthetic
+  # users map to @volunteers.secondchance.local and every message lands in the local mail catcher.
+  notify-worker:
+    build: ./api
+    image: secondchance-api:local
+    environment:
+      <<: *aws-local
+      OTEL_SERVICE_NAME: secondchance-notify-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      SECONDCHANCE_NOTIFY_DIRECTORY: local
+      SECONDCHANCE_MAILER: smtp
+      SECONDCHANCE_SMTP_HOST: mail
+      SECONDCHANCE_SMTP_PORT: "1025"
+      SECONDCHANCE_WEB_URL: http://localhost:8088
+    command: python -m secondchance.notify
+    depends_on:
+      queue:
+        condition: service_started
+      mail:
+        condition: service_started
+
+  # Amazon SES stand-in: mission emails are readable at http://localhost:8025 and never leave this machine.
+  mail:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      - "127.0.0.1:8025:8025"
+
+  lgtm:
+    # OpenTelemetry collector + Tempo + Prometheus + Loki + Grafana (ADR-012), opt-in.
+    image: grafana/otel-lgtm:0.35.0
+    profiles: [observability]
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+
+volumes:
+  pgdata:
+  objects:

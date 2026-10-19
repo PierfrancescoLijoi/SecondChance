@@ -1,0 +1,219 @@
+name: secondchance-emulation
+
+# The Lambda images exactly as scripts/deploy.sh pushes them, run by the AWS Runtime Interface
+# Emulator with a read-only filesystem, against an Aurora-like Postgres and local stand-ins for
+# Secrets Manager, SQS and S3. Driven by api/tests_emulation; start it with scripts/emulate-aws.sh.
+# Ports are 19xxx on 127.0.0.1, so it runs beside the development stack.
+#
+# Differences from AWS, all outside the code under test: no Bedrock (hash embeddings, extractive
+# answers, keyword routing), Lambda-to-Lambda calls reach the emulator through AWS_ENDPOINT_URL_LAMBDA
+# (whose function name is always "function"), the master secret is addressed by name, moto stands in
+# for DynamoDB and the WebSocket management API, and the Step Functions loop is driven by the tests.
+
+x-aws: &aws
+  AWS_REGION: eu-central-1
+  AWS_DEFAULT_REGION: eu-central-1
+  AWS_ACCESS_KEY_ID: emulation
+  AWS_SECRET_ACCESS_KEY: emulation
+
+# Mirrors local.common_env in infra/terraform/modules/secondchance/compute.tf.
+x-common: &common
+  <<: *aws
+  SECONDCHANCE_ENV: demo
+  SECONDCHANCE_AUTH_MODE: cognito
+  SECONDCHANCE_COGNITO_ISSUER: https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_EMULATION
+  SECONDCHANCE_COGNITO_CLIENT_ID: emulation-web-client
+  SECONDCHANCE_DB_IAM_AUTH: "1"
+  SECONDCHANCE_DATABASE_URL: postgresql+psycopg://secondchance_app@aurora:5432/secondchance
+  SECONDCHANCE_S3_BUCKET: secondchance-emulation-objects
+  SECONDCHANCE_QUEUE_AGENTS: agents
+  SECONDCHANCE_QUEUE_JOBS: jobs
+  SECONDCHANCE_QUEUE_NOTIFY: notify
+  SECONDCHANCE_EMBEDDINGS: hash
+  SECONDCHANCE_LLM: none
+  SECONDCHANCE_ROUTER_MODE: hybrid
+  SECONDCHANCE_LOG_LEVEL: INFO
+  SECONDCHANCE_WEB_ORIGINS: https://d1234abcd5678e.cloudfront.net
+  SECONDCHANCE_SQS_ENDPOINT: http://queue:9324
+  SECONDCHANCE_S3_ENDPOINT: http://storage:8333
+  # Realtime delivery, as Terraform sets it for every function (realtime.tf, compute.tf).
+  SECONDCHANCE_REALTIME_TABLE: secondchance-emulation-realtime-connections
+  SECONDCHANCE_REALTIME_QUEUE_URL: http://queue:9324/000000000000/realtime-events
+  SECONDCHANCE_REALTIME_MANAGEMENT_ENDPOINT: http://secrets:5000
+  AWS_ENDPOINT_URL_SQS: http://queue:9324
+  AWS_ENDPOINT_URL_DYNAMODB: http://secrets:5000
+
+x-lambda: &lambda
+  read_only: true
+  tmpfs: [/tmp]
+  depends_on:
+    aurora:
+      condition: service_healthy
+    queue:
+      condition: service_started
+    storage:
+      condition: service_started
+
+services:
+  aurora:
+    build: ../../db
+    image: secondchance-db:16
+    command: >-
+      postgres -c ssl=on -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+      -c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+    environment:
+      POSTGRES_PASSWORD: emulation-only
+    volumes:
+      - ./aurora-init.sh:/docker-entrypoint-initdb.d/aurora-init.sh:ro
+    ports:
+      - "127.0.0.1:19432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d secondchance"]
+      interval: 2s
+      retries: 60
+
+  secrets:
+    image: motoserver/moto:5.1.0
+    ports:
+      - "127.0.0.1:19500:5000"
+
+  queue:
+    image: softwaremill/elasticmq-native:1.7.1
+    volumes:
+      - ../../local/elasticmq.conf:/opt/elasticmq.conf:ro
+    ports:
+      - "127.0.0.1:19324:9324"
+
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    command: server -s3 -dir=/data -master.volumeSizeLimitMB=256
+    ports:
+      - "127.0.0.1:18333:8333"
+
+  migrate:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.migrate]
+    environment:
+      <<: *common
+      SECONDCHANCE_MIGRATOR_URL: postgresql+psycopg://secondchance_migrator@aurora:5432/secondchance
+      SECONDCHANCE_DB_HOST: aurora
+      SECONDCHANCE_DB_MASTER_SECRET_ARN: rds!cluster-emulation
+      AWS_ENDPOINT_URL_SECRETS_MANAGER: http://secrets:5000
+    ports: ["127.0.0.1:19101:8080"]
+
+  demo-seed:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.demo_seed]
+    environment: *common
+    ports: ["127.0.0.1:19102:8080"]
+
+  tool-executor:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.tool_executor]
+    environment: *common
+    ports: ["127.0.0.1:19103:8080"]
+
+  mcp-gateway:
+    <<: *lambda
+    image: secondchance-lambda-emulator:gateway
+    command: [python, -m, awslambdaric, mcp_gateway.lambda_handler.gateway]
+    environment:
+      <<: *aws
+      SECONDCHANCE_TOOL_EXECUTOR_FUNCTION: function
+      AWS_ENDPOINT_URL_LAMBDA: http://tool-executor:8080
+    ports: ["127.0.0.1:19104:8080"]
+
+  agents:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.agents]
+    environment:
+      <<: *common
+      SECONDCHANCE_MCP_GATEWAY_FUNCTION: function
+      AWS_ENDPOINT_URL_LAMBDA: http://mcp-gateway:8080
+    ports: ["127.0.0.1:19105:8080"]
+
+  # Step Functions invokes this once per step; tests_emulation plays the state machine's loop.
+  agent-step:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.agent_step]
+    environment:
+      <<: *common
+      SECONDCHANCE_MCP_GATEWAY_FUNCTION: function
+      AWS_ENDPOINT_URL_LAMBDA: http://mcp-gateway:8080
+    ports: ["127.0.0.1:19110:8080"]
+
+  realtime-authorizer:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.realtime_authorizer]
+    environment:
+      <<: *common
+      SECONDCHANCE_COGNITO_JWKS: ${SECONDCHANCE_EMULATION_JWKS:-}
+    ports: ["127.0.0.1:19111:8080"]
+
+  realtime:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.realtime]
+    environment: *common
+    ports: ["127.0.0.1:19112:8080"]
+
+  realtime-publisher:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.realtime_publisher]
+    environment: *common
+    ports: ["127.0.0.1:19113:8080"]
+
+  jobs:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.jobs]
+    environment: *common
+    ports: ["127.0.0.1:19106:8080"]
+
+  # Public on AWS (no VPC, no data permission): Cognito + SES there, the log mailer here.
+  notifier:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.notifier]
+    environment:
+      <<: *aws
+      SECONDCHANCE_NOTIFY_DIRECTORY: local
+      SECONDCHANCE_MAILER: log
+      SECONDCHANCE_WEB_URL: https://d1234abcd5678e.cloudfront.net
+    ports: ["127.0.0.1:19114:8080"]
+
+  requeue:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.requeue]
+    environment:
+      <<: *common
+      SECONDCHANCE_MAINTENANCE_URL: postgresql+psycopg://secondchance_maintenance@aurora:5432/secondchance
+    ports: ["127.0.0.1:19107:8080"]
+
+  retention:
+    <<: *lambda
+    image: secondchance-lambda-emulator:worker
+    command: [python, -m, awslambdaric, secondchance.aws_lambda.retention]
+    environment:
+      <<: *common
+      SECONDCHANCE_MAINTENANCE_URL: postgresql+psycopg://secondchance_maintenance@aurora:5432/secondchance
+    ports: ["127.0.0.1:19108:8080"]
+
+  # The API behind the Lambda Web Adapter, invoked with API Gateway HTTP API v2 events.
+  api:
+    <<: *lambda
+    image: secondchance-lambda-emulator:api
+    command: [uvicorn, secondchance.main:app, --host, 0.0.0.0, --port, "8000"]
+    environment:
+      <<: *common
+      # Generated per run by api/tests_emulation; Terraform reads the real pool's keys at deploy time.
+      SECONDCHANCE_COGNITO_JWKS: ${SECONDCHANCE_EMULATION_JWKS:-}
+    ports: ["127.0.0.1:19109:8080"]

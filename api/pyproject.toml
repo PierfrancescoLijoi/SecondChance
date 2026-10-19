@@ -1,0 +1,49 @@
+[project]
+name = "secondchance-api"
+version = "0.1.0"
+description = "SecondChance API: food-surplus redistribution for NGOs"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.13",
+    "anthropic[bedrock]>=1.11,<1.12",
+    "awslambdaric>=4.1,<4.2",
+    "boto3>=1.40",
+    "fastapi>=0.115",
+    "httpx>=0.28,<0.29",
+    "opentelemetry-exporter-otlp-proto-http>=1.40",
+    "opentelemetry-instrumentation-fastapi>=0.60b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.60b0",
+    "opentelemetry-sdk>=1.40",
+    "ortools>=9.15,<9.16",
+    "psycopg[binary]>=3.2",
+    "pyjwt[crypto]>=2.9",
+    "pypdf>=6.19,<6.20",
+    "python-multipart>=0.0.20",
+    "sqlalchemy>=2.0",
+    "uvicorn>=0.30",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.uv]
+package = false
+# Supply chain: transitive releases younger than two weeks wait (pycparser 3.1x, absl-py 2.5.1,
+# numpy 2.5.4: October 2026).
+constraint-dependencies = ["pycparser<3.1", "absl-py<2.5.1", "numpy<2.5.4"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+# Pinned explicitly: newer ruff releases widen the default rule set.
+# S608: no SQL built from strings in application code (threat model, multi-tenancy residual risk).
+select = ["E4", "E7", "E9", "F", "S608"]
+
+[tool.ruff.lint.per-file-ignores]
+# DDL and catalog checks interpolate module constants, never input.
+"migrations/**" = ["S608"]
+"tests/**" = ["S608"]

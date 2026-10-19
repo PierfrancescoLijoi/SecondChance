@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecondChance · AWS architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:  #f5f5f5;
+      --color-ink:    #2d3142;
+      --color-muted:  #4f5d75;
+      --color-soft:   #7a8399;
+      --color-accent: #eb6c36;
+      --color-link:   #2e5aa8;
+      --color-rule:   rgba(45,49,66,0.12);
+      --font-sans:    'Geist', system-ui, sans-serif;
+      --font-serif:   'Instrument Serif', serif;
+      --font-mono:    'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); padding: 3rem 2rem; }
+    .frame { max-width: 1240px; margin: 0 auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    .diagram { overflow-x: auto; }
+    .diagram img { width: 100%; min-width: 960px; display: block; background: #ffffff; border: 1px solid var(--color-rule); border-radius: 6px; }
+    .cards { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 1rem; margin-top: 1.5rem; }
+    @media (max-width: 800px) { .cards { grid-template-columns: 1fr; } }
+    .card { background: #ffffff; border: 1px solid var(--color-rule); border-radius: 6px; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.ink { background: var(--color-ink); }
+    .card-dot.link { background: var(--color-link); }
+    .card .eyebrow { margin-bottom: 0.4rem; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.5; }
+    .card li { margin-bottom: 0.3rem; padding-left: 0.875rem; position: relative; }
+    .card li::before { content: '—'; position: absolute; left: 0; color: var(--color-soft); }
+    code { font-family: var(--font-mono); font-size: 0.75rem; }
+    .footer { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid rgba(45,49,66,0.10); font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-soft); letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · as deployed by infra/terraform · eu-central-1</p>
+    <h1>SecondChance on AWS: serverless, tenant-isolated, private by default</h1>
+
+    <div class="diagram">
+      <img src="../images/aws-architecture.svg" alt="SecondChance AWS architecture: CloudFront with WAF, API Gateway HTTP and WebSocket APIs, Cognito, Lambda functions in a private VPC without NAT, RDS Proxy and Aurora PostgreSQL, SQS, Step Functions, EventBridge Scheduler, DynamoDB, S3, Bedrock and SES">
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">ADR-003 · ADR-011 · ADR-017</p>
+        <div class="card-header"><span class="card-dot coral"></span><h3>Isolation lives in the database</h3></div>
+        <ul>
+          <li>The token proves who the caller is; the <code>membership</code> table, read on every request, decides the role and tenant.</li>
+          <li>Every transaction, from the API, a worker or a tool call, runs <code>SET LOCAL</code> for tenant, role and subject; RLS covers offers, chunks, runs, steps and memory.</li>
+          <li>Each Lambda family connects through RDS Proxy as its own database user with an IAM token; none has <code>BYPASSRLS</code>. S3 access is limited to <code>tenants/*</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">ADR-005 · ADR-006 · ADR-010</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>Stateless compute, durable state</h3></div>
+        <ul>
+          <li>Step Functions Standard drives one bounded <code>agent-step</code> invocation at a time; runs, leases and budgets live in Aurora.</li>
+          <li>Three queues (<code>jobs</code>, <code>notify</code>, <code>realtime-events</code>), each with a DLQ; messages carry identifiers only. <code>requeue</code> recovers lost work every few minutes.</li>
+          <li>No NAT: VPC Lambdas use endpoints for SQS, Bedrock, Secrets Manager, Lambda, Step Functions, S3 and DynamoDB. The notifier, the WebSocket authorizer and the publisher run outside the VPC with no data permission.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">ADR-012 · ADR-015 · NFR-013</p>
+        <div class="card-header"><span class="card-dot link"></span><h3>Governed tools, traced end to end</h3></div>
+        <ul>
+          <li>Agent tools cross the MCP Gateway (allow-list, schema, DynamoDB quota, audit) before the private tool executor, which acts only for the active run step.</li>
+          <li>CloudWatch logs and alarms to SNS, X-Ray tracing, an account-wide budget; one correlation ID across API, queues, agent steps and audit.</li>
+          <li>Locally: Bedrock ↔ Ollama · SQS ↔ ElasticMQ · S3 ↔ SeaweedFS · SES ↔ Mailpit · ADOT ↔ otel-lgtm.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">Source: infra/terraform/modules/secondchance · diagram generated by scripts/architecture-diagram.py · prices and model availability to verify before deploy</p>
+  </div>
+</body>
+</html>

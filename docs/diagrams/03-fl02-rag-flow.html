@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecondChance · FL-02 grounded RAG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:  #f5f5f5;
+      --color-ink:    #2d3142;
+      --color-muted:  #4f5d75;
+      --color-soft:   #7a8399;
+      --color-accent: #eb6c36;
+      --color-link:   #2e5aa8;
+      --color-rule:   rgba(45,49,66,0.12);
+      --font-sans:    'Geist', system-ui, sans-serif;
+      --font-serif:   'Instrument Serif', serif;
+      --font-mono:    'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); padding: 3rem 2rem; }
+    .frame { max-width: 1080px; margin: 0 auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    .diagram { overflow-x: auto; }
+    svg { width: 100%; min-width: 860px; display: block; }
+    .cards { display: grid; grid-template-columns: 1.1fr 1fr 0.95fr; gap: 1rem; margin-top: 1.5rem; }
+    @media (max-width: 800px) { .cards { grid-template-columns: 1fr; } }
+    .card { background: #ffffff; border: 1px solid var(--color-rule); border-radius: 6px; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.ink { background: var(--color-ink); }
+    .card-dot.link { background: var(--color-link); }
+    .card .eyebrow { margin-bottom: 0.4rem; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.5; }
+    .card li { margin-bottom: 0.3rem; padding-left: 0.875rem; position: relative; }
+    .card li::before { content: '—'; position: absolute; left: 0; color: var(--color-soft); }
+    code { font-family: var(--font-mono); font-size: 0.75rem; }
+    .footer { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid rgba(45,49,66,0.10); font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-soft); letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · SecondChance v0.2 · FL-02</p>
+    <h1>Grounded answers, or none at all</h1>
+
+    <div class="diagram">
+    <svg viewBox="0 0 1040 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fl02-rag-title fl02-rag-desc">
+      <title id="fl02-rag-title">FL-02: tenant-safe, grounded RAG</title>
+      <desc id="fl02-rag-desc">A coordinator's question is scoped to their tenant before retrieval, answered by Bedrock only when retrieved evidence is strong enough and the guardrail confirms grounding, and otherwise the system abstains and points to a human referent.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- Arrows -->
+      <path d="M 240,80 V 112" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,168 V 200" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,256 V 288" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,344 V 376" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 328,420 H 440" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,464 V 656 Q 240,664 248,664 H 440" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 560,448 V 496" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 648,540 H 760" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 560,584 V 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Branch labels -->
+      <rect x="370" y="400" width="28" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="384" y="409" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+      <rect x="248" y="548" width="24" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="260" y="557" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+      <rect x="690" y="520" width="28" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="704" y="529" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+      <rect x="568" y="606" width="24" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="580" y="615" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+
+      <!-- Editorial callouts -->
+      <text font-family="'Instrument Serif', serif" font-style="italic" font-size="14" fill="#4f5d75">
+        <tspan x="384" y="134">a leak becomes a database error,</tspan>
+        <tspan x="384" y="150">not a missed code review</tspan>
+      </text>
+      <text font-family="'Instrument Serif', serif" font-style="italic" font-size="14" fill="#4f5d75">
+        <tspan x="704" y="408">logged: model, tokens,</tspan>
+        <tspan x="704" y="424">guardrail verdict, chunk IDs;</tspan>
+        <tspan x="704" y="440">never the prompt text</tspan>
+      </text>
+
+      <!-- 1 Start -->
+      <rect x="160" y="40" width="160" height="40" rx="20" fill="#f5f5f5"/>
+      <rect x="160" y="40" width="160" height="40" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="240" y="64" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Coordinator asks</text>
+
+      <!-- 2 Tenant scope (focal) -->
+      <rect x="120" y="112" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="120" y="112" width="240" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="240" y="136" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Verify JWT, set tenant</text>
+      <text x="240" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SET LOCAL app.tenant_id · role</text>
+
+      <!-- 3 Retrieval -->
+      <rect x="120" y="200" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="120" y="200" width="240" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="240" y="224" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Hybrid retrieval</text>
+      <text x="240" y="240" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">FTS + pgvector · RLS-filtered</text>
+
+      <!-- 4 Fusion -->
+      <rect x="120" y="288" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="120" y="288" width="240" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="240" y="312" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Rank fusion</text>
+      <text x="240" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RRF · rerank only if it helps</text>
+
+      <!-- 5 Decision: evidence -->
+      <polygon points="240,376 328,420 240,464 152,420" fill="#f5f5f5"/>
+      <polygon points="240,376 328,420 240,464 152,420" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="240" y="417" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Evidence above</text>
+      <text x="240" y="432" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">threshold?</text>
+
+      <!-- 6 Generation -->
+      <rect x="440" y="392" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="440" y="392" width="240" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="560" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bedrock Converse</text>
+      <text x="560" y="432" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">guardrail: injection · PII · grounding</text>
+
+      <!-- 7 Decision: grounded -->
+      <polygon points="560,496 648,540 560,584 472,540" fill="#f5f5f5"/>
+      <polygon points="560,496 648,540 560,584 472,540" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="560" y="537" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Guardrail</text>
+      <text x="560" y="552" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">grounded?</text>
+
+      <!-- 8 Answer -->
+      <rect x="760" y="516" width="240" height="48" rx="24" fill="#f5f5f5"/>
+      <rect x="760" y="516" width="240" height="48" rx="24" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="880" y="537" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Answer with citations</text>
+      <text x="880" y="552" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">doc · section · version</text>
+
+      <!-- 9 Abstain -->
+      <rect x="440" y="640" width="240" height="48" rx="24" fill="#f5f5f5"/>
+      <rect x="440" y="640" width="240" height="48" rx="24" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="560" y="661" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Abstain</text>
+      <text x="560" y="676" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">point to a human referent</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="712" x2="1000" y2="712" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="728" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+      <rect x="40" y="740" width="22" height="10" rx="5" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="70" y="748" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / outcome</text>
+      <rect x="168" y="740" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="190" y="748" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step (SecondChance code)</text>
+      <rect x="300" y="740" width="14" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="322" y="748" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step (AWS managed)</text>
+      <polygon points="444,739 452,745 444,751 436,745" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="460" y="748" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+      <rect x="532" y="740" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="554" y="748" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Security before retrieval</text>
+    </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">FR-043 · ADR-003</p>
+        <div class="card-header"><span class="card-dot coral"></span><h3>Security before retrieval</h3></div>
+        <ul>
+          <li>Tenant and role are set on the transaction before the first query.</li>
+          <li>RLS filters document chunks exactly as it filters offers.</li>
+          <li>ACL-negative tests must return zero rows, in CI, on every change.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">FR-044 · FR-045</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>Two chances to abstain</h3></div>
+        <ul>
+          <li>Weak retrieval: no model call at all, which is cheaper and safer.</li>
+          <li>Grounding score below threshold: abstain, never a best guess.</li>
+          <li>The UI labels every answer as AI-generated (AI Act transparency).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">NFR-019</p>
+        <div class="card-header"><span class="card-dot link"></span><h3>Measured, not assumed</h3></div>
+        <ul>
+          <li>Golden set per language: hit@k, faithfulness ≥ 95%, citation correctness ≥ 90%.</li>
+          <li>Reranker and embedding model stay only if they move those numbers.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">SecondChance PRD v0.2 · FL-02 · ADR-004, ADR-008</p>
+  </div>
+</body>
+</html>
