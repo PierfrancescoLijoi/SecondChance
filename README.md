@@ -1,5 +1,55 @@
 # SecondChance
 
+<p align="center">
+  <strong>AI-assisted food rescue. Human-approved decisions. Secure by design.</strong>
+</p>
+
+<p align="center">
+  <a href="#engineering-confidence"><img alt="Quality checks" src="https://img.shields.io/badge/Checks-passing-2ea44f?style=flat-square&logo=githubactions&logoColor=white"></a>
+  <a href="#engineering-confidence"><img alt="API test suite" src="https://img.shields.io/badge/API%20tests-290%20passing-2ea44f?style=flat-square&logo=pytest&logoColor=white"></a>
+  <a href="#engineering-confidence"><img alt="Frontend test suite" src="https://img.shields.io/badge/Frontend%20tests-22%20passing-2ea44f?style=flat-square&logo=vitest&logoColor=white"></a>
+  <a href="#engineering-confidence"><img alt="MCP test suite" src="https://img.shields.io/badge/MCP%20tests-6%20passing-2ea44f?style=flat-square&logo=python&logoColor=white"></a>
+  <a href="#engineering-confidence"><img alt="IaC security scan" src="https://img.shields.io/badge/IaC%20scan-no%20HIGH%20or%20CRITICAL-2ea44f?style=flat-square&logo=terraform&logoColor=white"></a>
+  <a href="#licence"><img alt="PolyForm Noncommercial license" src="https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-007ec6?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="#stack-at-a-glance"><img alt="Python backend" src="https://img.shields.io/badge/Python-backend-3776AB?style=flat-square&logo=python&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="React" src="https://img.shields.io/badge/React-web-149ECA?style=flat-square&logo=react&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-web-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="Vite" src="https://img.shields.io/badge/Vite-build-646CFF?style=flat-square&logo=vite&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Aurora-4169E1?style=flat-square&logo=postgresql&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="pgvector" src="https://img.shields.io/badge/pgvector-vector%20search-336791?style=flat-square&logo=postgresql&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="#stack-at-a-glance"><img alt="Amazon Bedrock" src="https://img.shields.io/badge/Amazon%20Bedrock-GenAI-6B42C1?style=flat-square&logo=amazonwebservices&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="Grounded RAG" src="https://img.shields.io/badge/RAG-hybrid%20retrieval-635BFF?style=flat-square"></a>
+  <a href="#why-there-are-two-gateways"><img alt="Model Context Protocol" src="https://img.shields.io/badge/MCP-governed%20tools-24292F?style=flat-square"></a>
+  <a href="#what-the-product-offers"><img alt="Google OR-Tools" src="https://img.shields.io/badge/OR-Tools-CP-SAT%20matching-4285F4?style=flat-square&logo=google&logoColor=white"></a>
+  <a href="#what-the-product-offers"><img alt="Human approval" src="https://img.shields.io/badge/AI%20decisions-human%20approved-5D6875?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="#aws-architecture"><img alt="Amazon Web Services" src="https://img.shields.io/badge/AWS-serverless-FF9900?style=flat-square&logo=amazonwebservices&logoColor=white"></a>
+  <a href="#aws-architecture"><img alt="AWS Lambda" src="https://img.shields.io/badge/AWS%20Lambda-compute-FF9900?style=flat-square&logo=awslambda&logoColor=white"></a>
+  <a href="#aws-architecture"><img alt="AWS Step Functions" src="https://img.shields.io/badge/Step%20Functions-orchestration-E7157B?style=flat-square"></a>
+  <a href="#deploy-to-aws"><img alt="Terraform" src="https://img.shields.io/badge/Terraform-IaC-844FBA?style=flat-square&logo=terraform&logoColor=white"></a>
+  <a href="#run-locally"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-local%20dev-2496ED?style=flat-square&logo=docker&logoColor=white"></a>
+  <a href="#engineering-confidence"><img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=flat-square&logo=githubactions&logoColor=white"></a>
+  <a href="#stack-at-a-glance"><img alt="OpenTelemetry" src="https://img.shields.io/badge/OpenTelemetry-observability-425CC7?style=flat-square&logo=opentelemetry&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="#what-the-product-offers">Features</a> ·
+  <a href="#aws-architecture">Architecture</a> ·
+  <a href="#stack-at-a-glance">Tech stack</a> ·
+  <a href="#security-model">Security</a> ·
+  <a href="#run-locally">Quick start</a> ·
+  <a href="#deploy-to-aws">AWS deployment</a> ·
+  <a href="#join-the-project">Contribute</a>
+</p>
 SecondChance is a source-available coordination platform, free for non-profit and charitable organisations, that helps surplus food reach people instead of becoming waste. Donors publish available food, NGO networks organise the work, coordinators reserve offers, and authorised people remain in control of every operational decision.
 
 The platform combines a multilingual web application, strict tenant isolation, asynchronous workers, grounded knowledge search and governed AI agents. AI can retrieve procedures, explain evidence and prepare a plan; it cannot silently allocate food or bypass a human approval.
@@ -141,6 +191,8 @@ The detailed visual flows are available as standalone documents:
 For the full analysis, see the [threat model](docs/security/threat-model.md), [GDPR notes](docs/compliance/gdpr.md) and [architecture decisions](docs/ADR.md).
 
 ## Engineering confidence
+
+*The quality and security badges above reflect the last checks documented below; they are not live GitHub Actions status indicators.*
 
 **Confidence level: high.**
 
