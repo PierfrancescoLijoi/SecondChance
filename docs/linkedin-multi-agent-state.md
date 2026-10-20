@@ -1,6 +1,6 @@
 # LinkedIn draft · Multi-agent systems: where does the loop keep its state?
 
-Second SecondChance post, after [SecondChance on AWS](linkedin-architecture.md). One design decision, as a problem and its fix.
+Second SecondChance post, after [SecondChance on AWS](linkedin-architecture.md). Structure: hook, problem, solution, how it works, then the image.
 
 ![Where a multi-agent loop keeps its state](images/linkedin-multi-agent-state.png)
 
@@ -10,40 +10,44 @@ Image to post: [`images/linkedin-multi-agent-state.png`](images/linkedin-multi-a
 
 ## Post
 
-A multi-agent run will die halfway sooner or later. The design question is what survives.
+Minute 14 of a multi-agent run. The supervisor has a plan, three specialists have reported back. Then the process dies.
 
-Many multi-agent prototypes keep the supervisor loop inside one process: the plan, the history and every specialist's findings live in RAM. In production that fails in four ways:
+What survives?
+
+If the loop lived in that process: nothing.
+
+THE PROBLEM
+
+Many multi-agent prototypes keep the supervisor loop inside one process. The plan, the history and every finding live in RAM. In production that fails in four ways:
 
 1️⃣ A timeout or restart (Lambda stops at 15 minutes, pods get evicted) loses the run and everything it learned.
 2️⃣ A retry repeats a tool call that already ran.
 3️⃣ Nothing stops a model that keeps looping.
 4️⃣ Memory in RAM has no tenant boundary and no audit trail, and ties each run to one machine.
 
-So the first choice is not the framework. It is where the state lives.
+THE SOLUTION
 
-In SecondChance, the source-available food-rescue platform I am building, the answer is: in no process.
+Keep the state in no process at all. The agent is a function, the run is a state machine, the database is the memory.
 
-How it is modelled:
+HOW IT WORKS (SecondChance, the source-available food-rescue platform I am building)
 
 → A run is a state machine in PostgreSQL. agent_run holds the status and the budgets (by default 12 steps, 60k tokens, 10 minutes). agent_step holds one row per turn, UNIQUE (run_id, seq), with an attempt counter and a lease.
 
-→ Each step is stateless: claim (take the lease, attempt + 1, check the budget), execute one turn of one agent, then complete in a short transaction that only the claiming attempt can commit. A worker that lost its lease has its result dropped.
+→ Each step is stateless: claim (lease, attempt + 1, budget check), execute one turn of one agent, then complete in a short transaction that only the claiming attempt can commit. A worker that lost its lease has its result dropped.
 
 → The loop lives outside the agents. AWS Step Functions invokes one step at a time and continues only when the committed outcome says so. Code and budgets end the run, not the model's text.
 
-→ The shared blackboard is a table under Row-Level Security: per tenant and run, the source agent on every row, a 7-day expiry.
+→ The shared blackboard is a table under Row-Level Security: per tenant and run, source agent on every row, 7-day expiry.
 
-→ The supervisor plans only from a closed catalog of specialists; the server validates the plan and falls back to a fixed one when it is invalid. Tools go through an MCP gateway (allow-list, quota) and are read-only. Agents write no operational data: they return a recommendation, and a person decides.
+→ The supervisor plans only from a closed catalog of specialists, and the server validates the plan. Tools go through an MCP gateway (allow-list, quota) and are read-only. Agents write no operational data: they return a recommendation, and a person decides.
 
-One honest caveat: this gives exactly-once commits, not exactly-once execution. After a crash a turn can run again, but only one result is ever committed. That is why the tools are read-only.
+Honest caveat: this gives exactly-once commits, not exactly-once execution. After a crash a turn can run again, but only one result is committed. That is why the tools are read-only.
 
-What it buys: any instance can resume any run, a duplicate message is a no-op, a run over budget ends as budget_exhausted instead of "success", and every turn records model, prompt hash, tokens and latency. The recovery and budget paths are covered by tests against a real PostgreSQL.
+The cost: more database round trips and no hidden framework state. For a single-turn assistant it is overkill. For agents that run for minutes, touch real data or serve several tenants, it is the first decision I would make.
 
-The cost: more database round trips, and no hidden framework state (I skipped LangGraph checkpointers because they would duplicate state the database already owns). For a single-turn assistant this is overkill. For agents that run for minutes, touch real data or serve several tenants, it is the first decision I would make.
+👇 In the image: the same supervisor and specialists, the problem on the left, the solution on the right, and each failure mapped to its fix.
 
-Rule of thumb: the agent is a function, the run is a state machine, the database is the memory.
-
-Code and ADRs: https://github.com/PierfrancescoLijoi/SecondChance
+Code, ADRs and tests: https://github.com/PierfrancescoLijoi/SecondChance
 
 #AgenticAI #MultiAgent #LLMOps #SoftwareArchitecture #AWS #PostgreSQL
 
