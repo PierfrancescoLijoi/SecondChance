@@ -1,6 +1,6 @@
 # LinkedIn draft · Multi-agent systems: where does the loop keep its state?
 
-Second SecondChance post, after [SecondChance on AWS](linkedin-architecture.md). Structure: hook, problem, solution, how it works, then the image.
+Second SecondChance post, after [SecondChance on AWS](linkedin-architecture.md). Structure: hook, problem, solution, how it works, then the image. Written in a plain first-person voice.
 
 ![Where a multi-agent loop keeps its state](images/linkedin-multi-agent-state.png)
 
@@ -10,42 +10,41 @@ Image to post: [`images/linkedin-multi-agent-state.png`](images/linkedin-multi-a
 
 ## Post
 
-Minute 14 of a multi-agent run. The supervisor has a plan, three specialists have reported back. Then the process dies.
+Minute 14 of a multi-agent run. 🕑
+The supervisor has its plan, three specialists have reported back.
+Then the process dies. 💥
 
-What survives?
+What's left?
 
-If the loop lived in that process: nothing.
+If the loop lived inside that process, nothing.
 
-THE PROBLEM
+A lot of multi-agent prototypes work like this: the supervisor runs in one process and keeps the plan, the history and every finding in memory. It's fine on a laptop. In production it breaks in four ways:
 
-Many multi-agent prototypes keep the supervisor loop inside one process. The plan, the history and every finding live in RAM. In production that fails in four ways:
+⏱️ A timeout or a restart (Lambda stops at 15 minutes, pods get evicted) throws away the run and everything it learned.
+🔁 A retry runs a tool call that already ran.
+♾️ Nobody stops a model that keeps looping.
+🧠 Memory in RAM has no tenant boundary and no audit trail, and it ties each run to one machine.
 
-1️⃣ A timeout or restart (Lambda stops at 15 minutes, pods get evicted) loses the run and everything it learned.
-2️⃣ A retry repeats a tool call that already ran.
-3️⃣ Nothing stops a model that keeps looping.
-4️⃣ Memory in RAM has no tenant boundary and no audit trail, and ties each run to one machine.
+For SecondChance, the source-available food-rescue platform I'm building, I went the other way: no process keeps any state. 💡
+The agent is a function. The run is a state machine. The database is the memory.
 
-THE SOLUTION
+Here's what that looks like in practice 👇
 
-Keep the state in no process at all. The agent is a function, the run is a state machine, the database is the memory.
+🗂️ Every run is a state machine in PostgreSQL. agent_run holds the status and the budgets (by default 12 steps, 60k tokens, 10 minutes). agent_step has one row per turn, UNIQUE (run_id, seq), with an attempt counter and a lease.
 
-HOW IT WORKS (SecondChance, the source-available food-rescue platform I am building)
+⚙️ Each step is stateless. It claims the step (lease, attempt + 1, budget check), runs one turn of one agent, then commits in a short transaction that only the claiming attempt can write. If a worker lost its lease, its result is thrown away.
 
-→ A run is a state machine in PostgreSQL. agent_run holds the status and the budgets (by default 12 steps, 60k tokens, 10 minutes). agent_step holds one row per turn, UNIQUE (run_id, seq), with an attempt counter and a lease.
+🔄 The loop sits outside the agents. AWS Step Functions calls one step at a time and only continues when the committed outcome says so. Code and budgets end a run, not whatever the model writes.
 
-→ Each step is stateless: claim (lease, attempt + 1, budget check), execute one turn of one agent, then complete in a short transaction that only the claiming attempt can commit. A worker that lost its lease has its result dropped.
+🔒 The blackboard the agents share is a table under Row-Level Security: scoped to tenant and run, with the source agent on every row and a 7-day expiry.
 
-→ The loop lives outside the agents. AWS Step Functions invokes one step at a time and continues only when the committed outcome says so. Code and budgets end the run, not the model's text.
+🛡️ The supervisor can only plan with specialists from a closed catalog, and the server checks the plan. Tools go through an MCP gateway (allow-list, quota) and they're read-only. Agents don't write operational data. They return a recommendation, and a person decides.
 
-→ The shared blackboard is a table under Row-Level Security: per tenant and run, source agent on every row, 7-day expiry.
+One thing I want to be upfront about ⚠️: this gives you exactly-once commits, not exactly-once execution. After a crash a turn can run again, but only one result ever gets committed. That's the reason the tools are read-only.
 
-→ The supervisor plans only from a closed catalog of specialists, and the server validates the plan. Tools go through an MCP gateway (allow-list, quota) and are read-only. Agents write no operational data: they return a recommendation, and a person decides.
+It isn't free either 💸. You pay with more database round trips, and you give up any state hidden inside a framework. For a single-turn assistant I wouldn't bother. For agents that run for minutes, touch real data or serve more than one tenant, it's the first thing I'd decide.
 
-Honest caveat: this gives exactly-once commits, not exactly-once execution. After a crash a turn can run again, but only one result is committed. That is why the tools are read-only.
-
-The cost: more database round trips and no hidden framework state. For a single-turn assistant it is overkill. For agents that run for minutes, touch real data or serve several tenants, it is the first decision I would make.
-
-👇 In the image: the same supervisor and specialists, the problem on the left, the solution on the right, and each failure mapped to its fix.
+The image below puts both designs side by side, with each failure mapped to its fix. 👇
 
 Code, ADRs and tests: https://github.com/PierfrancescoLijoi/SecondChance
 
