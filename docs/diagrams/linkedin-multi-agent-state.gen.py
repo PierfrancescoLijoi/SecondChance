@@ -122,7 +122,7 @@ sfn = node("sfn", "<b>AWS Step Functions</b> · owns the loop<br>"
 lam = group("lam", "agent-step Lambda · stateless, any instance", 740, 350, 780, 180, ORANGE, "#FFFFFF",
             valign="bottom", size=17, dashed=False)
 phase_labels = ("<b>① claim</b><br>lease · attempt + 1<br>budget check",
-                "<b>② execute</b><br>one supervisor or<br>specialist turn",
+                "<b>② execute</b><br>one turn of one agent<br>no transaction held",
                 "<b>③ complete</b><br>fenced by attempt<br>commit · next seq")
 phases = [node(f"ph{i}", label, 765 + 260 * i, 370, 220, 100, ORANGE, ORANGE_BG, 17) for i, label in enumerate(phase_labels)]
 edge(sfn, phases[0], "down", 875, "invoke (run_id, seq)")
@@ -140,12 +140,12 @@ for i, label in enumerate(table_labels):
 edge(lam, db, "down", 1135, "short transaction · SET LOCAL tenant")
 
 gov_labels = ("<b>closed catalog</b><br>supervisor picks specialists",
-              "<b>MCP gateway</b><br>read-only tools · audit",
-              "<b>pending proposal</b><br>a person approves")
-text("gov_title", "every turn is governed", 765, 826, 740, 30, 17, TEAL, "left", True)
-gov = [node(f"g{i}", label, 765 + 260 * i, 860, 220, 72, TEAL, TEAL_BG, 16) for i, label in enumerate(gov_labels)]
-edge(gov[0], gov[1], "right", 896)
-edge(gov[1], gov[2], "right", 896)
+              "<b>MCP gateway</b><br>allow-list · quota<br>read-only tools",
+              "<b>no operational writes</b><br>output is a recommendation")
+text("gov_title", "every turn is governed", 765, 822, 740, 30, 17, TEAL, "left", True)
+gov = [node(f"g{i}", label, 765 + 260 * i, 856, 220, 84, TEAL, TEAL_BG, 16) for i, label in enumerate(gov_labels)]
+edge(gov[0], gov[1], "right", 898)
+edge(gov[1], gov[2], "right", 898)
 
 # ---- Failure → fix -------------------------------------------------------------------------------
 text("h_left", "What breaks when state lives in one process", 40, 995, 740, 40, 21, RED, "left", True)
@@ -154,11 +154,11 @@ rows = (
     ("<b>1 · Crash or timeout</b> (Lambda 15 min, pod eviction): the run and everything it learned are lost.",
      "<b>1 · Commit after every step</b>: any instance resumes the run from the last committed seq."),
     ("<b>2 · Retry</b> after a timeout: the same tool call runs twice, e.g. a double reservation.",
-     "<b>2 · UNIQUE (run_id, seq) + attempt fencing</b>: a duplicate is a no-op, a late result is dropped."),
+     "<b>2 · UNIQUE (run_id, seq) + attempt fencing</b>: one committed result per step; a re-run turn can only read."),
     ("<b>3 · No budget</b>: a looping model keeps calling itself; tokens and cost are unbounded.",
-     "<b>3 · Circuit breaker in the commit</b>: 12 steps · 60k tokens · 10 min, before the next step exists."),
+     "<b>3 · Circuit breaker in the commit</b>: 12 steps · 60k tokens · 10 min by default, checked before the next step exists."),
     ("<b>4 · Memory in RAM</b>: no tenant boundary, no audit trail, sticky sessions.",
-     "<b>4 · Blackboard in PostgreSQL under RLS</b>: per tenant and run, with provenance, expiry and audit."),
+     "<b>4 · Blackboard in PostgreSQL under RLS</b>: per tenant and run, source agent on every row, 7-day expiry."),
 )
 for i, (bad, good) in enumerate(rows):
     y = 1045 + 88 * i
