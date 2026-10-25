@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.13",
     "anthropic[bedrock]>=1.11,<1.12",
-    "awslambdaric>=4.1,<4.2",
+    "awslambdaric>=4.1,<4.3",
     "boto3>=1.40",
     "fastapi>=0.115",
     "httpx>=0.28,<0.29",
