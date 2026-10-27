@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# A stand-in for the Azure CLI used by scripts/azure/tests/run.sh. It answers only the commands the Azure scripts
+# are meant to use (each one checked against `az ... --help`) and fails loudly on anything else, so a script that
+# starts calling an unmodelled command, or drops a flag the real CLI needs, fails the harness.
+# Behaviour is steered by FAKE_* variables; every call is appended to $FAKE_LOG.
+set -u
+: "${FAKE_LOG:?}"
+echo "az $*" >>"$FAKE_LOG"
+ARGS="$*"
+DATA="$(dirname "$0")/../data"
+counter() {   # counter <name> <first-n-calls-return> <then-return>: a call counter that survives subshells
+  local file="$FAKE_STATE/$1" n=0
+  [ -f "$file" ] && n=$(cat "$file")
+  echo $((n + 1)) >"$file"
+  if [ "$n" -lt "$2" ]; then echo "${4:-1}"; else echo "$3"; fi
+}
+
+case "$ARGS" in
+  "account show --query id --output tsv") echo "${FAKE_SUBSCRIPTION:-99999999-8888-7777-6666-555555555555}" ;;
+  "account set --subscription "*) ;;
+  "account show --query tenantId --output tsv") echo "11111111-2222-3333-4444-555555555555" ;;
+  "account show --query "*"subscription:name"*) echo "Test subscription	tester@example.org" ;;
+  "extension add --name containerapp"*) ;;
+  "provider show --namespace "*) echo "${FAKE_PROVIDER_STATE:-Registered}" ;;
+  "provider register --namespace "*) ;;
+  "cognitiveservices model list --location "*) cat "$DATA/${FAKE_MODELS:-models.json}" ;;
+  "cognitiveservices usage list --location "*) cat "$DATA/${FAKE_USAGE:-usage.json}" ;;
+  "postgres flexible-server list-skus --location "*) cat "$DATA/${FAKE_SKUS:-skus.json}" ;;
+  "group exists --name "*) echo "${FAKE_GROUP_EXISTS:-false}" ;;
+  "acr check-name --name "*) echo "${FAKE_NAME_FREE:-true}" ;;
+  "storage account check-name --name "*) echo "${FAKE_NAME_FREE:-true}" ;;
+  "resource list --resource-type Microsoft.SignalRService/webPubSub "*) echo "${FAKE_OTHER_FREE_PUBSUB:-0}" ;;
+  "rest --method get --url https://graph.microsoft.com/v1.0/applications"*) [ "${FAKE_GRAPH:-ok}" = ok ] || exit 1 ;;
+  "rest --method get --url https://management.azure.com"*defenderForStorageSettings*) echo "${FAKE_DEFENDER:-true}" ;;
+  "storage account show --name "*) [ "${FAKE_STATE_ACCOUNT:-present}" = present ] || exit 1 ;;
+  "storage account list --resource-group "*) echo "/subscriptions/99999999/resourceGroups/rg-secondchance-demo/providers/Microsoft.Storage/storageAccounts/stmock" ;;
+  "acr login --name "*) ;;
+  "acr repository show --name "*) [ "${FAKE_IMAGE_PRESENT:-no}" = yes ] ;;
+  "containerapp job start --name "*) echo "exec-$(counter exec 99999 0 | tr -d '\n')" ;;
+  "containerapp job execution show --name "*) echo "${FAKE_JOB_STATUS:-Succeeded}" ;;
+  "containerapp job logs show --name "*) echo '{"task": "fake", "result": "ok"}' ;;
+  "containerapp job update --name "*"--set-env-vars SECONDCHANCE_PLATFORM_ADMIN_SUB="*) ;;
+  "containerapp job update --name "*"--remove-env-vars SECONDCHANCE_PLATFORM_ADMIN_SUB"*) ;;
+  "containerapp show --name "*"--query properties.configuration.ingress.fqdn --output tsv") echo "app.mock.germanywestcentral.azurecontainerapps.io" ;;
+  "servicebus queue show --namespace-name "*"deadLetterMessageCount"*) echo "${FAKE_DEAD_LETTERS:-0}" ;;
+  "servicebus queue show --namespace-name "*"activeMessageCount"*) counter backlog "${FAKE_BACKLOG_POLLS:-0}" 0 1 ;;
+  "ad user show --id "*" --query id --output tsv") [ "${FAKE_NO_USER:-no}" = no ] && echo "7e6c8c0e-0000-4000-8000-000000000001" || exit 1 ;;
+  *) echo "FAKE-AZ: unmodelled command: az $ARGS" >&2; exit 99 ;;
+esac

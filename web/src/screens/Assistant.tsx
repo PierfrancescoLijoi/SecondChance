@@ -6,7 +6,7 @@ import { config } from "../config";
 import { useI18n } from "../i18n";
 import type { MessageKey } from "../locales/en";
 import { SCREENS } from "../nav";
-import { openRunSocket } from "../realtime";
+import { openNegotiatedRunSocket, openRunSocket } from "../realtime";
 import { AnswerView } from "./Knowledge";
 
 // The API also returns an English message; the screen shows its own translation by kind.
@@ -99,7 +99,16 @@ function RunView({ runId }: { runId: string }) {
     });
     void refresh();
     void (async () => {
-      const realtimeUrl = config().realtimeUrl;
+      const { realtimeUrl, realtimeMode } = config();
+      if (realtimeMode === "negotiate") {
+        // A 503 (not configured) or 404 just leaves the polling below in charge.
+        const negotiated = await openNegotiatedRunSocket(() => api<{ url: string }>(`/agent-runs/${runId}/realtime`)).catch(() => null);
+        if (!negotiated) return;
+        if (!active) return negotiated.close();
+        socket = negotiated;
+        socket.onmessage = () => void refresh();
+        return;
+      }
       const token = await currentToken();
       const tenant = selectedTenant.get();
       if (!active || !realtimeUrl || !token || !tenant) return;

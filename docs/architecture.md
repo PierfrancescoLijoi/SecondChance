@@ -1,6 +1,6 @@
 # SecondChance architecture
 
-An overview of the system as it is in the code. Decisions and the alternatives they rejected are in the [ADRs](ADR.md); requirements in the [PRD](PRD.md); the map of AWS services and their local equivalents in [infra/README.md](../infra/README.md).
+An overview of the system as it is in the code. Decisions and the alternatives they rejected are in the [ADRs](ADR.md); requirements in the [PRD](PRD.md); the map of AWS services, their Azure equivalents and their local equivalents in [infra/README.md](../infra/README.md). The diagrams below show the AWS deployment; the Azure one is in [deployment-azure.md](deployment-azure.md) and runs the same application.
 
 ## Constraints that drive everything
 

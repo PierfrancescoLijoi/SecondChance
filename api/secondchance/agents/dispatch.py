@@ -50,6 +50,6 @@ def configured_dispatcher(*, recover: bool = False):
     state_machine = os.environ.get("SECONDCHANCE_AGENT_STATE_MACHINE_ARN")
     if state_machine:
         return StepFunctionsDispatcher(state_machine, recover=recover)
-    from secondchance.queues import SqsQueue
+    from secondchance.queues import open_queue
 
-    return SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_AGENTS", "agents"))
+    return open_queue("SECONDCHANCE_QUEUE_AGENTS", "agents")

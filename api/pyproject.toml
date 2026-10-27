@@ -7,9 +7,16 @@ dependencies = [
     "alembic>=1.13",
     "anthropic[bedrock]>=1.11,<1.12",
     "awslambdaric>=4.1,<4.2",
+    "azure-communication-email>=1.0",
+    "azure-identity>=1.19",
+    "azure-messaging-webpubsubservice>=1.2",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b35",
+    "azure-servicebus>=7.13",
+    "azure-storage-blob>=12.24",
     "boto3>=1.40",
     "fastapi>=0.115",
     "httpx>=0.28,<0.29",
+    "openai>=1.109",
     "opentelemetry-exporter-otlp-proto-http>=1.40",
     "opentelemetry-instrumentation-fastapi>=0.60b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.60b0",
@@ -31,8 +38,8 @@ dev = [
 [tool.uv]
 package = false
 # Supply chain: transitive releases younger than two weeks wait (pycparser 3.1x, absl-py 2.5.1,
-# numpy 2.5.4: October 2026).
-constraint-dependencies = ["pycparser<3.1", "absl-py<2.5.1", "numpy<2.5.4"]
+# numpy 2.5.4, azure-identity 1.27, openai 3.39: October 2026).
+constraint-dependencies = ["pycparser<3.1", "absl-py<2.5.1", "numpy<2.5.4", "azure-identity<1.27", "openai<3.39"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

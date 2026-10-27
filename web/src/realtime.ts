@@ -17,3 +17,12 @@ export function openRunSocket(
   url.searchParams.set("run_id", runId);
   return new Socket(url.toString(), ["secondchance", token]);
 }
+
+/** Azure Web PubSub: the API checks membership and ownership and returns a URL that only receives this run's events. */
+export async function openNegotiatedRunSocket(
+  negotiate: () => Promise<{ url: string }>,
+  Socket: typeof WebSocket = WebSocket,
+): Promise<WebSocket> {
+  const { url } = await negotiate();
+  return new Socket(url);
+}

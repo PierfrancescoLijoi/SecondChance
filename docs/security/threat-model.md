@@ -272,6 +272,21 @@ In priority order, assessed for reaching the pilot (likelihood times impact, aft
 | 10 | A volunteer's account compromised (email, phone) | passwordless email sign-in, personal devices | P1 |
 | 11 | Habitual approval emptying human control | human factor, mitigable only with metrics and interface design | P3+, P5 |
 
+### Azure residual risks
+
+The Azure deployment ([ADR-023](../ADR.md#adr-023--multi-cloud-the-same-code-on-azure-with-adapters-container-apps-and-entra)) keeps the controls above (RLS, no secrets, private data plane, fail-closed malware verdict) and changes the following. Each is a conscious trade-off.
+
+| # | Risk | Why it remains | Mitigation |
+|---|---|---|---|
+| A1 | The deployment identity can grant itself anything in the subscription (Contributor + User Access Administrator) | Terraform must create roles and role assignments; the AWS deploy role has a permission boundary, Azure's equivalent (a conditioned RBAC Administrator) cannot create the custom role the document store needs | a dedicated subscription, a reviewer on the GitHub `production` environment, federated credential limited to that environment, no stored secret |
+| A2 | The notifier can read any user's mail attribute in the tenant (Graph `User.Read.All`) | Graph has no narrower application permission for one attribute; Cognito's `ListUsers` was scoped to one pool | the identity is attached to the notifier only, which has no data permission; the code puts only a validated GUID in the URL and sends a fixed template without personal data |
+| A3 | The API and the workers share one database identity | one PostgreSQL role maps to one Entra principal | the tools path is separated with its own identity (`agent`); RLS and the three roles are unchanged; replicas are bounded |
+| A4 | Blob index tags (the malware verdict) are not tamper-proof for anyone who can write them | Microsoft documents it | the application identity has no tag-write right (custom role); the worker fails closed on any value but "No threats found"; Defender also raises alerts |
+| A5 | A request reaching an API container is not a request that passed the WAF's rules | the container can only check that it came through Front Door (`X-Azure-FDID`); an NSG cannot filter the inbound traffic of an external Container Apps environment | the header check is the lock, and `verify.sh` proves it holds; Private Link from Premium Front Door to an internal environment is the stricter option |
+| A6 | The JWT is not checked at the edge | Front Door has no token authorizer | 401 before any database use; the WAF rate limit runs first; scale-to-zero containers wake for an unauthenticated request |
+| A7 | No PII anonymisation in answers; grounding check is opt-in | Content Safety offers no equivalent of Bedrock's PII masking | answers are cited extracts, the question is checked for prompt attacks and harm, human review of proposals (ADR-010) |
+| A8 | Platform-managed keys, not customer-managed | CMK adds a vault and a propagation dependency to the first apply | AES-256 plus infrastructure encryption on storage; CMK is the documented next step |
+
 ## 8. Keeping it alive
 
 This document is versioned with the code. Every PR that touches a boundary updates the relevant row and its status: from "planned" to "active (test: …)" only when the test exists and is green in CI.

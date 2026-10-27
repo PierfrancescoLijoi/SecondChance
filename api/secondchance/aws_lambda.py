@@ -13,15 +13,15 @@ from functools import lru_cache
 
 from secondchance.dbconn import make_engine
 from secondchance.observability import configure_logging
-from secondchance.queues import MalformedMessage, SqsQueue
+from secondchance.queues import MalformedMessage, Queue, open_queue
 
 configure_logging()
 log = logging.getLogger(__name__)
 
 
 @lru_cache
-def _queue(env_name: str, default: str) -> SqsQueue:
-    return SqsQueue(os.environ.get(env_name, default))
+def _queue(env_name: str, default: str) -> Queue:
+    return open_queue(env_name, default)
 
 
 def _batch(event: dict, handle) -> dict:

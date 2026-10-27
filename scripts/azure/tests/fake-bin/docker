@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# A stand-in for Docker: `build -` reads the tar stream the scripts pipe in, like the real one.
+set -u
+: "${FAKE_LOG:?}"
+echo "docker $*" >>"$FAKE_LOG"
+case "$1" in
+  info|push) ;;
+  build) cat >/dev/null ;;
+  *) echo "FAKE-DOCKER: unmodelled command $*" >&2; exit 99 ;;
+esac

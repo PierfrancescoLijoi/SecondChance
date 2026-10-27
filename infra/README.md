@@ -1,6 +1,6 @@
 # infra
 
-Terraform for AWS ([ADR-018](../docs/ADR.md#adr-018--aws-deployment-terraform-no-access-keys-self-configuration)). It is not run by hand: [`scripts/deploy.sh`](../scripts/deploy.sh) and [`scripts/destroy.sh`](../scripts/destroy.sh) use it. Credentials and first run: [docs/deployment.md](../docs/deployment.md).
+Terraform for AWS ([ADR-018](../docs/ADR.md#adr-018--aws-deployment-terraform-no-access-keys-self-configuration)) and for Azure ([ADR-023](../docs/ADR.md#adr-023--multi-cloud-the-same-code-on-azure-with-adapters-container-apps-and-entra)): you choose the cloud when you deploy. It is not run by hand: [`scripts/deploy.sh`](../scripts/deploy.sh) and [`scripts/destroy.sh`](../scripts/destroy.sh) use it. Credentials and first run: [docs/deployment.md](../docs/deployment.md).
 
 ```
 terraform/
@@ -35,3 +35,35 @@ Pinned versions: Terraform 1.16.5, AWS provider `~> 6.66`, lock files for Linux,
 The module defaults to `router_mode = "hybrid"`: hard safety rules and confident direct paths avoid an LLM call, while ambiguous or multi-step requests use the configured Bedrock model with a strict output contract. Optional Rizzo Flow primary/shadow URLs are Terraform inputs, but must resolve through private VPC connectivity because the deployment intentionally has no NAT gateway.
 
 The module creates no NAT gateway: every service the Lambda functions reach from the VPC needs an endpoint (`interface_endpoints`). A new service without an endpoint fails with a timeout, not a permission error.
+
+## Azure
+
+```
+terraform/azure/
+  bootstrap/              once per subscription: state storage account (Entra auth only), the deployment identity with a GitHub federated credential
+  modules/secondchance/   the whole environment, one file per area (network, data, storage, queues, ai, realtime, email, identity, compute, edge, detection, observability)
+  envs/demo/              ephemeral demo with synthetic data: Burstable database, Free Web PubSub, Basic registry, no locks
+  envs/pilot/             pilot: zone-redundant database, locks, NAT gateway, geo-redundant backup, replicas kept warm
+```
+
+Pinned: Terraform 1.16.5, `azurerm ~> 4.81`, `azuread ~> 3.10`. CI runs `fmt -check`, `validate`, `terraform test` (the module and both environments, with mocked providers whose resource ids look like Azure's) and Trivy. The scripts are in [`scripts/azure/`](../scripts/azure), the guide in [docs/deployment-azure.md](../docs/deployment-azure.md).
+
+The Azure service for each AWS service, for the same logical component:
+
+| Component | On AWS | On Azure |
+|---|---|---|
+| Web app and edge | S3 + CloudFront + WAF | `web` container + Front Door + WAF policy |
+| Identity | Cognito | Microsoft Entra ID (app registration, PKCE; External ID for public sign-up) |
+| API | API Gateway + Lambda | Container App |
+| Agent orchestration | Step Functions + agent-step Lambda | `agents` Service Bus queue + agents worker (state in PostgreSQL) |
+| Workers and schedules | Lambda on SQS, EventBridge Scheduler | Container Apps on KEDA, Container Apps jobs with cron |
+| Notifications | SES + Cognito | Communication Services Email + Microsoft Graph |
+| Data | RDS Proxy + Aurora Serverless v2 | PostgreSQL flexible server (Entra auth, bounded pools) |
+| Queues | SQS + DLQ | Service Bus + dead-letter sub-queue |
+| Objects | KMS-encrypted S3 | Blob Storage, shared keys off, private endpoint |
+| LLM, embeddings, guardrails | Bedrock + Guardrails | Azure OpenAI (EU data zone) + AI Content Safety |
+| Observability | CloudWatch, SNS, Budgets | Log Analytics, Application Insights, Azure Monitor action group, budget |
+| Detection | CloudTrail, GuardDuty, Malware Protection | blob logs, Defender for Storage |
+| MCP tools | Lambda + IAM + DynamoDB | Container Apps (internal) + Entra app roles + Table Storage |
+| Real-time updates | API Gateway WebSocket + DynamoDB | Web PubSub groups, URL minted by the API |
+| Network | VPC without NAT, endpoints | virtual network, private endpoints, delegated PostgreSQL subnet, optional NAT gateway |

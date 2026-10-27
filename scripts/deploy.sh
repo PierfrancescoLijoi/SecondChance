@@ -11,6 +11,9 @@
 # docker images when not installed.
 set -euo pipefail
 
+# One repository, two clouds (ADR-023): SECONDCHANCE_CLOUD=azure hands over to the Azure scripts.
+if [ "${SECONDCHANCE_CLOUD:-aws}" = azure ]; then exec bash "$(dirname "$0")/azure/deploy.sh" "$@"; fi
+
 ENVIRONMENT=${1:?usage: scripts/deploy.sh <demo|pilot>}
 case "$ENVIRONMENT" in demo|pilot) ;; *) echo "unknown environment: $ENVIRONMENT" >&2; exit 2 ;; esac
 : "${SECONDCHANCE_ALARM_EMAIL:?set SECONDCHANCE_ALARM_EMAIL (alarms and budget alerts)}"

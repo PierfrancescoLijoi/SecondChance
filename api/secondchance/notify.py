@@ -2,7 +2,7 @@
 
 It has no database access by design. A message from the `notify` queue carries a delivery id, the
 recipient's identity-provider subject, a notification kind and a language. The address comes from
-the identity provider (Cognito on AWS: domain tables never store contacts, ADR-014); the text comes
+the identity provider (Cognito on AWS, Microsoft Graph on Azure: domain tables never store contacts, ADR-014); the text comes
 from a fixed template that says only that something is waiting in SecondChance. No offer details,
 no names and no beneficiary data ever leave in an email.
 
@@ -21,10 +21,11 @@ from functools import lru_cache
 from typing import Protocol
 
 from secondchance.observability import configure_logging, configure_telemetry, meter
-from secondchance.queues import MalformedMessage, Queue, SqsQueue, drain, require
+from secondchance.queues import MalformedMessage, Queue, drain, open_queue, require
 
 log = logging.getLogger(__name__)
 SUBJECT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@-]{0,254}$")  # nothing that could escape a Cognito filter
+OBJECT_ID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")  # an Entra object id, the only thing put in a Graph URL
 LANGUAGES = ("en", "da", "pl", "it")
 PERMANENT_SES_ERRORS = frozenset({"MessageRejected", "MailFromDomainNotVerifiedException", "BadRequestException"})
 
@@ -134,6 +135,69 @@ class SesMailer:
             raise
 
 
+class GraphDirectory:
+    """The mailbox of an Entra user, looked up by object id (the subject Azure sign-in puts in the API)."""
+
+    SCOPE = "https://graph.microsoft.com/.default"
+
+    def __init__(self, http=None, token=None) -> None:
+        import httpx
+
+        self.http = http or httpx.Client(base_url="https://graph.microsoft.com/v1.0", timeout=10)
+        self.token = token or self._token
+
+    @staticmethod
+    def _token() -> str:
+        from secondchance.cloud import bearer
+
+        return bearer(GraphDirectory.SCOPE)
+
+    def email_for(self, subject: str) -> str | None:
+        if not OBJECT_ID.fullmatch(subject):
+            return None  # not an Entra user (a synthetic demo subject): nothing to look up
+        response = self.http.get(
+            f"/users/{subject}", params={"$select": "accountEnabled,mail,otherMails"},
+            headers={"Authorization": f"Bearer {self.token()}"},
+        )
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        user = response.json()
+        if not user.get("accountEnabled", True):
+            return None
+        return user.get("mail") or next(iter(user.get("otherMails") or []), None)
+
+
+class AcsMailer:
+    """Azure Communication Services Email, authenticated with the notifier's managed identity."""
+
+    def __init__(self, sender: str, endpoint: str | None = None, client=None) -> None:
+        if client is None:
+            from azure.communication.email import EmailClient
+
+            from secondchance.cloud import azure_credential
+
+            client = EmailClient(endpoint or os.environ["SECONDCHANCE_ACS_ENDPOINT"], azure_credential())
+        self.client, self.sender = client, sender
+
+    def send(self, to: str, subject: str, body: str) -> None:
+        from azure.core.exceptions import HttpResponseError
+
+        message = {
+            "senderAddress": self.sender,
+            "recipients": {"to": [{"address": to}]},
+            "content": {"subject": subject, "plainText": body},
+        }
+        try:
+            result = self.client.begin_send(message).result()
+        except HttpResponseError as error:
+            if error.status_code in (400, 422):  # a recipient or sender ACS refuses: retrying cannot fix it
+                raise PermanentFailure(str(error.error.code if error.error else error.status_code)) from error
+            raise
+        if result.get("status") != "Succeeded":
+            raise RuntimeError(f"ACS did not deliver the message: {result.get('status')}")
+
+
 class SmtpMailer:
     """Local mail catcher (Mailpit in docker-compose.yml): the same messages, never leaving the machine."""
 
@@ -180,15 +244,20 @@ def handle(body: object, directory: Directory, mailer: Mailer, web_url: str) -> 
 
 @lru_cache
 def configured() -> tuple[Directory, Mailer, str]:
-    """Adapters from the environment (NFR-013): Cognito + SES on AWS, the local catcher in Compose."""
-    if os.environ.get("SECONDCHANCE_NOTIFY_DIRECTORY", "local") == "cognito":
+    """Adapters from the environment (NFR-013): Cognito + SES on AWS, Graph + ACS on Azure, the local catcher in Compose."""
+    kind = os.environ.get("SECONDCHANCE_NOTIFY_DIRECTORY", "local")
+    if kind == "cognito":
         directory: Directory = CognitoDirectory(os.environ["SECONDCHANCE_COGNITO_USER_POOL_ID"])
+    elif kind == "graph":
+        directory = GraphDirectory()
     else:
         directory = LocalDirectory(os.environ.get("SECONDCHANCE_LOCAL_MAIL_DOMAIN", "volunteers.secondchance.local"))
     sender = os.environ.get("SECONDCHANCE_MAIL_FROM", "SecondChance <no-reply@secondchance.local>")
     mode = os.environ.get("SECONDCHANCE_MAILER", "log")
     if mode == "ses":
         mailer: Mailer = SesMailer(sender)
+    elif mode == "acs":
+        mailer = AcsMailer(sender)
     elif mode == "smtp":
         mailer = SmtpMailer(os.environ.get("SECONDCHANCE_SMTP_HOST", "mail"),
                             int(os.environ.get("SECONDCHANCE_SMTP_PORT", "1025")), sender)
@@ -209,4 +278,4 @@ def drain_queue(queue: Queue, wait_seconds: int = 0, max_batches: int | None = N
 if __name__ == "__main__":
     configure_logging()
     configure_telemetry()
-    drain_queue(SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_NOTIFY", "notify")), wait_seconds=10)
+    drain_queue(open_queue("SECONDCHANCE_QUEUE_NOTIFY", "notify"), wait_seconds=10)

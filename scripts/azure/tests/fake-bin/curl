@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# A stand-in for curl: the edge answers, a request that skips Front Door is refused.
+set -u
+: "${FAKE_LOG:?}"
+echo "curl $*" >>"$FAKE_LOG"
+url="" ; want_code=0
+for arg in "$@"; do
+  case "$arg" in http*) url=$arg ;; esac
+done
+case " $* " in *" -w "*) want_code=1 ;; esac
+if [ "$want_code" = 1 ]; then
+  case "$url" in
+    *azurecontainerapps.io*) echo "${FAKE_ORIGIN_CODE:-403}" ;;
+    */api/me) echo "${FAKE_API_ME_CODE:-401}" ;;
+    *) echo 200 ;;
+  esac
+  exit 0
+fi
+case "$url" in
+  */config.json) echo '{"apiUrl":"/api","authMode":"oidc","realtimeMode":"negotiate","oidc":{"authority":"https://login.microsoftonline.com/t/v2.0","clientId":"c","scope":"openid api://c/access_as_user"}}' ;;
+  *) echo '{"status":"ok"}' ;;
+esac

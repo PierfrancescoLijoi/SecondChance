@@ -101,9 +101,51 @@ jobs:
           docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/envs/demo hashicorp/terraform:1.16.5 test
           docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/modules/secondchance hashicorp/terraform:1.16.5 init -backend=false -input=false
           docker run --rm -v "$PWD/infra/terraform:/tf" -w /tf/modules/secondchance hashicorp/terraform:1.16.5 test
+      # The same for the Azure stacks (ADR-023): the module is evaluated with mocked providers whose resource
+      # ids are shaped like real Azure ids, so the provider's own validators run without a subscription.
+      - name: terraform validate and test (Azure)
+        run: |
+          for stack in azure/bootstrap azure/envs/demo azure/envs/pilot azure/modules/secondchance; do
+            docker run --rm -v "$PWD/infra/terraform:/tf" -w "/tf/$stack" hashicorp/terraform:1.16.5 init -backend=false -input=false
+            docker run --rm -v "$PWD/infra/terraform:/tf" -w "/tf/$stack" hashicorp/terraform:1.16.5 validate
+          done
+          for stack in azure/modules/secondchance azure/envs/demo azure/envs/pilot; do
+            docker run --rm -v "$PWD/infra/terraform:/tf" -w "/tf/$stack" hashicorp/terraform:1.16.5 test
+          done
       - name: trivy (high and critical misconfigurations fail the build)
         run: docker run --rm -v "$PWD:/src:ro" aquasec/trivy:0.75.0 config --severity HIGH,CRITICAL --exit-code 1 /src/infra/terraform
       - name: shellcheck
         run: |
-          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 /s/deploy.sh /s/destroy.sh /s/grant-platform-admin.sh /s/build-images.sh /s/connect-aws.sh /s/verify-aws.sh /s/emulate-aws.sh /s/ci-lambda-adapter.sh
+          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 /s/deploy.sh /s/destroy.sh /s/grant-platform-admin.sh /s/build-images.sh /s/connect-aws.sh /s/verify-aws.sh /s/emulate-aws.sh /s/ci-lambda-adapter.sh /s/connect.sh
+          docker run --rm -v "$PWD/scripts:/s:ro" koalaman/shellcheck:v0.10.0 -x -e SC1091 /s/azure/lib.sh /s/azure/connect.sh /s/azure/deploy.sh /s/azure/verify.sh /s/azure/destroy.sh /s/azure/grant-platform-admin.sh /s/azure/tests/run.sh /s/azure/tests/fake-bin/az /s/azure/tests/fake-bin/terraform /s/azure/tests/fake-bin/docker /s/azure/tests/fake-bin/curl /s/azure/tests/fake-bin/sleep
           docker run --rm -v "$PWD/infra/emulation:/e:ro" koalaman/shellcheck:v0.10.0 /e/aurora-init.sh
+      - name: Azure scripts against stand-in tools
+        run: bash scripts/azure/tests/run.sh
+
+  # The Azure images deploy.sh pushes (ADR-023): the API starts with the Azure adapters selected and refuses a
+  # request that skipped Front Door; the web image renders its configuration and origin lock from the environment.
+  azure-images:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: web image (nginx template)
+        run: |
+          docker build --target azure -t secondchance-web-azure web
+          docker run -d --rm --name web -p 18080:8080 -e FRONT_DOOR_ID=fd-1 -e CSP_CONNECT_SRC="https://login.microsoftonline.com"             -e CSP_FORM_ACTION="https://login.microsoftonline.com" -e WEB_CONFIG_JSON='{"apiUrl":"/api","authMode":"oidc"}' secondchance-web-azure
+          sleep 3
+          curl --fail --silent http://127.0.0.1:18080/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/config.json)" = 403
+          curl --fail --silent -H 'X-Azure-FDID: fd-1' http://127.0.0.1:18080/config.json | grep -q '"authMode":"oidc"'
+          docker stop web
+      - name: API image with the Azure adapters
+        run: |
+          docker build --target api -t secondchance-api-azure api
+          docker run -d --rm --name api -p 18000:8000 -e SECONDCHANCE_CLOUD=azure -e SECONDCHANCE_ENV=demo -e SECONDCHANCE_AUTH_MODE=entra             -e SECONDCHANCE_ENTRA_ISSUER=https://login.microsoftonline.com/t/v2.0 -e SECONDCHANCE_ENTRA_AUDIENCE=a             -e SECONDCHANCE_ENTRA_JWKS_URI=https://login.microsoftonline.com/t/discovery/v2.0/keys -e SECONDCHANCE_DB_ENTRA_AUTH=1             -e SECONDCHANCE_DATABASE_URL=postgresql+psycopg://secondchance_app@db.invalid:5432/secondchance -e SECONDCHANCE_FRONT_DOOR_ID=fd-1             secondchance-api-azure
+          curl --fail --silent --retry 20 --retry-delay 1 --retry-all-errors http://127.0.0.1:18000/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18000/me)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Azure-FDID: fd-1' http://127.0.0.1:18000/me)" = 401
+          docker stop api
+      - name: MCP gateway image
+        run: |
+          docker build --target service -t secondchance-gateway-azure mcp-gateway
+          docker run --rm secondchance-gateway-azure python -c "import mcp_gateway.app, azure.data.tables"

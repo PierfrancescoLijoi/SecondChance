@@ -138,8 +138,44 @@ class RealtimePublisher:
                 return
 
 
+def run_group(run_id: str | uuid.UUID) -> str:
+    return f"run-{run_id}"
+
+
+def _pubsub_client():
+    from azure.messaging.webpubsubservice import WebPubSubServiceClient
+
+    from secondchance.cloud import azure_credential
+
+    return WebPubSubServiceClient(
+        endpoint=os.environ["SECONDCHANCE_WEBPUBSUB_ENDPOINT"], hub=os.environ.get("SECONDCHANCE_WEBPUBSUB_HUB", "runs"),
+        credential=azure_credential(),
+    )
+
+
+def azure_client_url(subject: str, run_id: uuid.UUID, client=None, minutes: int = 60) -> str:
+    """Browser WebSocket URL for one run: the token joins the run's group and grants no send or join right."""
+    token = (client or _pubsub_client()).get_client_access_token(
+        user_id=subject, groups=[run_group(run_id)], roles=[], minutes_to_expire=minutes
+    )
+    return token["url"]
+
+
+class WebPubSubPublisher:
+    """Azure Web PubSub: events go to the run's group, so no connection registry is needed (ADR-023)."""
+
+    def __init__(self, client=None) -> None:
+        self.client = client or _pubsub_client()
+
+    def publish(self, run_id: str, event: dict) -> None:
+        self.client.send_to_group(run_group(run_id), event, content_type="application/json")
+
+
 def publish_run_event(run_id: str, event: dict) -> None:
     try:
+        if os.environ.get("SECONDCHANCE_WEBPUBSUB_ENDPOINT"):
+            WebPubSubPublisher().publish(run_id, event)
+            return
         queue_url = os.environ.get("SECONDCHANCE_REALTIME_QUEUE_URL")
         if queue_url:
             import boto3

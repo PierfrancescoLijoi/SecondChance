@@ -1,0 +1,6 @@
+[
+  {"kind": "OpenAI", "skuName": "S0", "model": {"format": "OpenAI", "name": "gpt-4.1-mini", "version": "2025-04-14", "skus": [
+    {"name": "GlobalStandard", "usageName": "OpenAI.GlobalStandard.gpt-4.1-mini", "capacity": {"default": 50, "maximum": 1000}}]}},
+  {"kind": "OpenAI", "skuName": "S0", "model": {"format": "OpenAI", "name": "text-embedding-3-large", "version": "1", "skus": [
+    {"name": "DataZoneStandard", "usageName": "OpenAI.DataZoneStandard.text-embedding-3-large", "capacity": {"default": 50, "maximum": 1000}}]}}
+]

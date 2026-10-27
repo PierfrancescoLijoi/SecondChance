@@ -13,7 +13,7 @@ from secondchance.agents.runtime import execute, requeue_stale
 from secondchance.db import engine
 from secondchance.dbconn import make_engine
 from secondchance.observability import configure_logging, configure_telemetry
-from secondchance.queues import MalformedMessage, Queue, SqsQueue, require
+from secondchance.queues import MalformedMessage, Queue, open_queue, require
 from secondchance.queues import drain as drain_queue
 
 log = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def drain(queue: Queue, wait_seconds: int = 0, max_batches: int | None = None) -
 if __name__ == "__main__":
     configure_logging()
     configure_telemetry(engine=engine)
-    queue = SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_AGENTS", "agents"))
+    queue = open_queue("SECONDCHANCE_QUEUE_AGENTS", "agents")
     if "--requeue" in sys.argv:  # scheduled job, with the maintenance role's credentials
         with make_engine(os.environ["SECONDCHANCE_MAINTENANCE_URL"]).connect() as connection:
             log.info("re-queued %s stale steps", requeue_stale(connection, queue))

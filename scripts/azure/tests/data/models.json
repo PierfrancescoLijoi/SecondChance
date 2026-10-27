@@ -1,0 +1,11 @@
+[
+  {"kind": "OpenAI", "skuName": "S0", "model": {"format": "OpenAI", "name": "gpt-4.1-mini", "version": "2025-04-14", "skus": [
+    {"name": "GlobalStandard", "usageName": "OpenAI.GlobalStandard.gpt-4.1-mini", "capacity": {"default": 50, "maximum": 1000}},
+    {"name": "DataZoneStandard", "usageName": "OpenAI.DataZoneStandard.gpt-4.1-mini", "capacity": {"default": 50, "maximum": 1000}}]}},
+  {"kind": "OpenAI", "skuName": "S0", "model": {"format": "OpenAI", "name": "text-embedding-3-large", "version": "1", "skus": [
+    {"name": "Standard", "usageName": "OpenAI.Standard.text-embedding-3-large", "capacity": {"default": 50, "maximum": 1000}},
+    {"name": "DataZoneStandard", "usageName": "OpenAI.DataZoneStandard.text-embedding-3-large", "capacity": {"default": 50, "maximum": 1000}}]}},
+  {"kind": "OpenAI", "skuName": "S0", "model": {"format": "OpenAI", "name": "gpt-5-mini", "version": "2025-08-07", "skus": [
+    {"name": "DataZoneStandard", "usageName": "OpenAI.DataZoneStandard.gpt-5-mini", "capacity": {"default": 50, "maximum": 500}}]}},
+  {"kind": "TextAnalytics", "skuName": "S", "model": {"format": "Microsoft", "name": "language", "version": "1", "skus": []}}
+]

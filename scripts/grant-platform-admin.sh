@@ -4,6 +4,9 @@
 # Later admins are approved inside the app; this is only the bootstrap of trust.
 set -euo pipefail
 
+# One repository, two clouds (ADR-023): SECONDCHANCE_CLOUD=azure hands over to the Azure scripts.
+if [ "${SECONDCHANCE_CLOUD:-aws}" = azure ]; then exec bash "$(dirname "$0")/azure/grant-platform-admin.sh" "$@"; fi
+
 ENVIRONMENT=${1:?usage: scripts/grant-platform-admin.sh <demo|pilot> <email>}
 EMAIL=${2:?usage: scripts/grant-platform-admin.sh <demo|pilot> <email>}
 REGION=eu-central-1

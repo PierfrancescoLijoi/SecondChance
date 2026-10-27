@@ -27,6 +27,10 @@ app.add_middleware(
     expose_headers=["X-Correlation-ID", "Retry-After"],
 )
 app.add_middleware(CorrelationIdMiddleware)
+if os.environ.get("SECONDCHANCE_FRONT_DOOR_ID"):  # Azure: only the edge may reach this app (ADR-023)
+    from secondchance.edge import FrontDoorOnly
+
+    app.add_middleware(FrontDoorOnly, front_door_id=os.environ["SECONDCHANCE_FRONT_DOOR_ID"])
 configure_telemetry(app, engine)
 
 for module in (accounts, offers, centers, matching, missions, operations, agents, knowledge, assist, experiments):

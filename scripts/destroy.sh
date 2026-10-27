@@ -3,6 +3,9 @@
 # The pilot keeps deletion protection on Aurora and Cognito: turn it off deliberately first.
 set -euo pipefail
 
+# One repository, two clouds (ADR-023): SECONDCHANCE_CLOUD=azure hands over to the Azure scripts.
+if [ "${SECONDCHANCE_CLOUD:-aws}" = azure ]; then exec bash "$(dirname "$0")/azure/destroy.sh" "$@"; fi
+
 ENVIRONMENT=${1:?usage: scripts/destroy.sh <demo|pilot>}
 REGION=eu-central-1
 ROOT=$(cd "$(dirname "$0")/.." && pwd)

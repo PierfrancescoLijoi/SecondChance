@@ -16,7 +16,7 @@ from secondchance.db import engine
 from secondchance.dbconn import make_engine
 from secondchance.knowledge import ingest
 from secondchance.observability import configure_logging, configure_telemetry
-from secondchance.queues import MalformedMessage, Queue, SqsQueue, drain, require
+from secondchance.queues import MalformedMessage, Queue, drain, open_queue, require
 
 log = logging.getLogger(__name__)
 STALE_UPLOAD = timedelta(minutes=2)
@@ -53,7 +53,7 @@ def requeue_stale(connection: Connection, queue: Queue) -> int:
 if __name__ == "__main__":
     configure_logging()
     configure_telemetry(engine=engine)
-    queue = SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_JOBS", "jobs"))
+    queue = open_queue("SECONDCHANCE_QUEUE_JOBS", "jobs")
     if "--requeue" in sys.argv:
         from secondchance.matching import requeue_stale as requeue_matching
         from secondchance.notifications import requeue_pending
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             log.info("re-queued %s stale ingestion jobs", requeue_stale(connection, queue))
             log.info("re-queued %s stale matching runs", requeue_matching(connection, queue))
         with maintenance.begin() as connection:
-            notify = SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_NOTIFY", "notify"))
+            notify = open_queue("SECONDCHANCE_QUEUE_NOTIFY", "notify")
             log.info("re-queued %s notification emails", requeue_pending(connection, notify))
             log.info("expired %s offers", expire_stale(connection))
     else:

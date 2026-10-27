@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from mcp_gateway.service import handle, policy
+from mcp_gateway.service_auth import require_service_role
 
 app = FastAPI(title="SecondChance MCP Tool Gateway", version="1.0.0")
 
@@ -18,12 +19,12 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/v1/tools/catalog")
+@app.get("/v1/tools/catalog", dependencies=[Depends(require_service_role("Tool.Invoke"))])
 def catalog() -> list[dict]:
     return policy.catalog()
 
 
-@app.post("/v1/tools/call")
+@app.post("/v1/tools/call", dependencies=[Depends(require_service_role("Tool.Invoke"))])
 def call(body: ToolCall) -> dict:
     result = handle(body.model_dump())
     if "error" in result:

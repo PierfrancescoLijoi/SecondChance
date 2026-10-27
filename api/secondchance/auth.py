@@ -2,7 +2,9 @@
 
 Tenant and role come from memberships in the database (secondchance.identity).
 - mock (local): HS256 with a shared secret, refused outside SECONDCHANCE_ENV=local;
-- cognito (AWS): RS256 access tokens checked against the user pool's JWKS.
+- cognito (AWS): RS256 access tokens checked against the user pool's JWKS;
+- entra (Azure): RS256 v2.0 access tokens of the API's app registration; the subject is the stable
+  object id (`oid`), because Entra's `sub` is pairwise per application and cannot be looked up later.
 """
 
 import os
@@ -30,6 +32,11 @@ if MODE == "mock":
 elif MODE == "cognito":
     ISSUER = os.environ["SECONDCHANCE_COGNITO_ISSUER"]  # https://cognito-idp.<region>.amazonaws.com/<pool id>
     CLIENT_ID = os.environ["SECONDCHANCE_COGNITO_CLIENT_ID"]
+elif MODE == "entra":
+    ISSUER = os.environ["SECONDCHANCE_ENTRA_ISSUER"]  # https://login.microsoftonline.com/<tenant>/v2.0 or the ciamlogin.com one
+    ENTRA_AUDIENCES = [a for a in os.environ["SECONDCHANCE_ENTRA_AUDIENCE"].split(",") if a]
+    ENTRA_JWKS_URI = os.environ["SECONDCHANCE_ENTRA_JWKS_URI"]
+    ENTRA_SCOPE = os.environ.get("SECONDCHANCE_ENTRA_SCOPE", "access_as_user")
 else:
     raise RuntimeError(f"unknown SECONDCHANCE_AUTH_MODE {MODE!r}")
 
@@ -59,6 +66,26 @@ def _deployed_jwks() -> jwt.PyJWKSet | None:
     return jwt.PyJWKSet.from_json(keys) if keys else None
 
 
+@lru_cache
+def _entra_jwks() -> jwt.PyJWKClient:
+    return jwt.PyJWKClient(ENTRA_JWKS_URI, cache_keys=True, lifespan=3600)
+
+
+def verify_entra(token: str, key, *, issuer: str, audiences: list[str], scope: str) -> dict:
+    """A delegated v2.0 access token for this API: right signer, issuer, audience and scope, and a user (oid)."""
+    payload = jwt.decode(
+        token, key, algorithms=["RS256"], audience=audiences, issuer=issuer,
+        options={"require": ["exp", "iss", "aud", "sub", "oid"]},
+    )
+    if scope not in str(payload.get("scp", "")).split():
+        raise jwt.InvalidTokenError("token was not issued for this API's user scope")
+    return payload
+
+
+def subject_of(payload: dict) -> str:
+    return payload["oid"] if MODE == "entra" else payload["sub"]
+
+
 def _signing_key(token: str):
     deployed = _deployed_jwks()
     if deployed is None:
@@ -71,6 +98,11 @@ def _signing_key(token: str):
 
 
 def verify(token: str) -> dict:
+    if MODE == "entra":
+        return verify_entra(
+            token, _entra_jwks().get_signing_key_from_jwt(token).key,
+            issuer=ISSUER, audiences=ENTRA_AUDIENCES, scope=ENTRA_SCOPE,
+        )
     if MODE == "cognito":
         key = _signing_key(token)
         payload = jwt.decode(
@@ -91,7 +123,7 @@ def current_identity(credentials: HTTPAuthorizationCredentials | None = Depends(
         raise _unauthorized("missing bearer token")
     try:
         payload = verify(credentials.credentials)
-        sub = payload["sub"]
+        sub = subject_of(payload)
         if not isinstance(sub, str) or not 0 < len(sub) <= 255:
             raise ValueError("bad subject")
     except (jwt.PyJWTError, KeyError, TypeError, ValueError, AttributeError) as exc:

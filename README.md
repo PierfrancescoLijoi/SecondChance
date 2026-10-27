@@ -289,6 +289,18 @@ SES sends a verification link to the sender address on the first apply; mission 
 
 The deployment uses IAM Identity Center where available and can create a repository-scoped GitHub OIDC role. See [Deploying to AWS](docs/deployment.md) for prerequisites, account bootstrap, costs, teardown and the acceptance checks.
 
+## Deploy to Azure
+
+The same code and the same images run on Azure: choose the cloud when you deploy ([ADR-023](docs/ADR.md#adr-023--multi-cloud-the-same-code-on-azure-with-adapters-container-apps-and-entra)).
+
+```bash
+az login
+export SECONDCHANCE_ALARM_EMAIL=you@example.org
+scripts/connect.sh azure demo        # preflight, bootstrap, deployment, verification
+```
+
+Container Apps scaled by KEDA, Front Door with a WAF, PostgreSQL flexible server with Entra authentication, Service Bus, Blob Storage, Azure OpenAI in the EU data zone with Azure AI Content Safety, Web PubSub, Communication Services and Defender for Storage; every service is reached with a managed identity and no secret exists. The Terraform module is evaluated offline by `terraform test` with the provider's own validators, and a preflight checks what only your subscription knows. See [Deploying to Azure](docs/deployment-azure.md) for the architecture, the mapping from AWS, prerequisites, costs, the verification checklist and what is not the same.
+
 ## Repository map
 
 ```text
@@ -296,7 +308,7 @@ api/          FastAPI, domain services, agents, workers, migrations and tests
 web/          React application, role-aware screens and four language packs
 db/           PostgreSQL image and local role bootstrap
 mcp-gateway/  independent MCP policy enforcement service
-infra/        Terraform stacks, reusable module and AWS runtime emulation
+infra/        Terraform for AWS (infra/terraform) and Azure (infra/terraform/azure), and the AWS runtime emulation
 scripts/      build, connect, deploy, verify, bootstrap-admin and destroy flows
 local/        local service configuration
 docs/         product, architecture, decisions, compliance, operations and diagrams
@@ -311,6 +323,7 @@ docs/         product, architecture, decisions, compliance, operations and diagr
 | [Architecture decisions](docs/ADR.md) | important decisions and rejected alternatives |
 | [Agent guide](docs/agents.md) | governed specialists, planning and tool rules |
 | [AWS deployment](docs/deployment.md) | credentials, bootstrap, deployment and verification |
+| [Azure deployment](docs/deployment-azure.md) | the same on Azure: architecture, mapping, preflight, verification, differences, costs |
 | [Operations](docs/operations/README.md) | SLOs, alerts and runbooks |
 | [Threat model](docs/security/threat-model.md) | threats, controls and residual risks |
 | [GDPR notes](docs/compliance/gdpr.md) | data roles, minimisation and retention |

@@ -70,7 +70,7 @@ class ToolPolicy:
 
 
 class MemoryRateLimiter:
-    """Local-only fixed-window limiter; AWS deployments use DynamoDBRateLimiter."""
+    """Local-only fixed-window limiter; AWS deployments use DynamoDBRateLimiter, Azure TableRateLimiter."""
 
     def __init__(self, limit: int, window_seconds: int = 60) -> None:
         self.limit = limit
@@ -109,3 +109,74 @@ class DynamoDBRateLimiter:
             )
         except self.client.exceptions.ConditionalCheckFailedException as exc:
             raise PolicyDenied("rate limit exceeded") from exc
+
+
+class TableRateLimiter:
+    """Fixed one-minute window in Azure Table Storage, the DynamoDB counter's counterpart (ADR-023).
+
+    One row per (caller, tool, window) is created or incremented under optimistic concurrency: the
+    ETag in the replace makes two simultaneous calls retry instead of both reading the same count.
+    Rows are a few bytes and keyed by window; `purge` (the gateway calls it rarely) drops old windows.
+    """
+
+    ATTEMPTS = 6
+
+    def __init__(self, table_client=None, *, endpoint: str | None = None, table: str | None = None) -> None:
+        if table_client is None:
+            import os
+
+            from azure.data.tables import TableClient
+            from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+
+            credential = (
+                ManagedIdentityCredential(client_id=os.environ.get("AZURE_CLIENT_ID"))
+                if os.environ.get("IDENTITY_ENDPOINT") or os.environ.get("MSI_ENDPOINT")
+                else DefaultAzureCredential(exclude_interactive_browser_credential=True)
+            )
+            table_client = TableClient(
+                endpoint or os.environ["SECONDCHANCE_MCP_RATE_LIMIT_TABLE_ENDPOINT"],
+                table or os.environ["SECONDCHANCE_MCP_RATE_LIMIT_TABLE"], credential=credential,
+            )
+        self.table = table_client
+
+    @staticmethod
+    def _keys(key: str, window: int) -> tuple[str, str]:
+        # Table keys cannot hold / \\ # ? or control characters; the digest also bounds their length.
+        import hashlib
+
+        return str(window), hashlib.sha256(key.encode()).hexdigest()
+
+    def consume(self, key: str, limit: int) -> None:
+        from azure.core import MatchConditions
+        from azure.core.exceptions import ResourceExistsError, ResourceModifiedError, ResourceNotFoundError
+
+        window = int(time.time()) // 60
+        partition, row = self._keys(key, window)
+        for _ in range(self.ATTEMPTS):
+            try:
+                entity = self.table.get_entity(partition, row)
+            except ResourceNotFoundError:
+                try:
+                    self.table.create_entity({"PartitionKey": partition, "RowKey": row, "requests": 1})
+                    return
+                except ResourceExistsError:
+                    continue  # another caller created it first: read it again
+            if entity["requests"] >= limit:
+                raise PolicyDenied("rate limit exceeded")
+            entity["requests"] += 1
+            try:
+                self.table.update_entity(entity, mode="replace", etag=entity.metadata["etag"],
+                                         match_condition=MatchConditions.IfNotModified)
+                return
+            except ResourceModifiedError:
+                continue
+        raise PolicyDenied("rate limit exceeded")  # contention this high is itself a reason to refuse
+
+    def purge(self, older_than_windows: int = 5) -> int:
+        """Deletes windows older than a few minutes; returns how many rows went."""
+        current = int(time.time()) // 60
+        removed = 0
+        for entity in self.table.query_entities("PartitionKey lt @limit", parameters={"limit": str(current - older_than_windows)}):
+            self.table.delete_entity(entity["PartitionKey"], entity["RowKey"])
+            removed += 1
+        return removed

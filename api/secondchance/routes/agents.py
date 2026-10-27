@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime
 from functools import lru_cache
@@ -13,10 +14,11 @@ from secondchance.agents.builtin import CATALOG
 from secondchance.agents.dispatch import configured_dispatcher
 from secondchance.agents.runtime import start_run
 from secondchance.db import tenant_transaction
-from secondchance.identity import Claims, require_roles, tenant_session
+from secondchance.identity import Claims, current_claims, require_roles, tenant_session
 from secondchance.memory import recall
 from secondchance.observability import current_correlation_id
 from secondchance.queues import Queue
+from secondchance.realtime import azure_client_url
 
 router = APIRouter(tags=["agents"])
 TenantSession = Depends(tenant_session, scope="function")
@@ -85,6 +87,24 @@ def post_agent_run(
     queue: Queue = Depends(agents_queue),
 ) -> AgentRunCreated:
     return AgentRunCreated(id=start_agent_run(claims, body.task, queue), status="queued")
+
+
+class RealtimeConnection(BaseModel):
+    url: str
+    expires_in: int
+
+
+@router.get("/agent-runs/{run_id}/realtime", response_model=RealtimeConnection)
+def get_agent_run_realtime(run_id: uuid.UUID, claims: Claims = Depends(current_claims), session: Session = TenantSession) -> RealtimeConnection:
+    """Azure: a Web PubSub URL for this run, minted after the same membership and ownership checks the
+    AWS WebSocket connect route makes. 404 hides runs that are not the caller's; 503 means polling only."""
+    if not os.environ.get("SECONDCHANCE_WEBPUBSUB_ENDPOINT"):
+        raise HTTPException(503, "real-time updates are not configured")
+    owner = session.execute(text("SELECT requested_by FROM agent_run WHERE id = :id"), {"id": run_id}).scalar_one_or_none()
+    if owner is None or owner != claims.sub:
+        raise HTTPException(404, "run not found")
+    minutes = 60
+    return RealtimeConnection(url=azure_client_url(claims.sub, run_id, minutes=minutes), expires_in=minutes * 60)
 
 
 @router.get("/agent-runs/{run_id}", response_model=AgentRun)

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# A stand-in for Terraform: records the call and answers the outputs the scripts read.
+set -u
+: "${FAKE_LOG:?}"
+echo "terraform $*" >>"$FAKE_LOG"
+ARGS=("$@")
+# drop -chdir=...
+[ "${ARGS[0]#-chdir=}" != "${ARGS[0]}" ] && ARGS=("${ARGS[@]:1}")
+case "${ARGS[0]}" in
+  init|apply|destroy|fmt|validate|test) ;;
+  output)
+    case "${ARGS[2]:-}" in
+      web_url) echo "https://ep-mock.z01.azurefd.net" ;;
+      resource_group) echo "rg-secondchance-${FAKE_ENV:-demo}" ;;
+      registry_name) echo "acrmock" ;;
+      registry_login_server) echo "acrmock.azurecr.io" ;;
+      servicebus_namespace) echo "sb-mock" ;;
+      notification_sender) echo "DoNotReply@mock.azurecomm.net" ;;
+      *) echo "FAKE-TERRAFORM: unmodelled output ${ARGS[*]}" >&2; exit 99 ;;
+    esac ;;
+  *) echo "FAKE-TERRAFORM: unmodelled command ${ARGS[*]}" >&2; exit 99 ;;
+esac

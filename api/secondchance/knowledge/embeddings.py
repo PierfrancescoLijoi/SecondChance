@@ -3,6 +3,8 @@
 - hash    (local default): deterministic feature hashing, offline, no model; lexical, not
            semantic and not cross-lingual. For tests and demos only.
 - bedrock (AWS): Amazon Titan Text Embeddings V2, 1024 dimensions, normalised.
+- azure_openai (Azure): a text-embedding-3 deployment asked for 1024 dimensions (they are truncated and normalised
+           server-side, so the pgvector column and every index stay as they are).
 - ollama  (local, optional): any 1024-dimension model, e.g. bge-m3 (multilingual).
 """
 
@@ -60,6 +62,32 @@ class BedrockTitanEmbedding:
         return vectors
 
 
+class AzureOpenAIEmbedding:
+    MAX_CHARS = 8000
+    BATCH = 16
+
+    def __init__(self, endpoint: str, deployment: str, client=None) -> None:
+        from secondchance.llm import azure_openai_client
+
+        self.client = client or azure_openai_client(endpoint)
+        self.model = deployment
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        import openai
+
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), self.BATCH):
+            batch = [text[: self.MAX_CHARS] or " " for text in texts[start : start + self.BATCH]]
+            try:
+                response = self.client.embeddings.create(model=self.model, input=batch, dimensions=DIMENSIONS)
+            except openai.OpenAIError as error:
+                raise ConnectionError(f"Azure OpenAI embeddings are unavailable: {error}") from error
+            vectors.extend(item.embedding for item in sorted(response.data, key=lambda item: item.index))
+        if any(len(vector) != DIMENSIONS for vector in vectors):
+            raise ValueError(f"{self.model} did not return {DIMENSIONS}-dimensional vectors")
+        return vectors
+
+
 class OllamaEmbedding:
     def __init__(self, base_url: str, model: str) -> None:
         self.url = base_url.rstrip("/") + "/api/embed"
@@ -82,6 +110,10 @@ def provider() -> EmbeddingProvider:
     kind = os.environ.get("SECONDCHANCE_EMBEDDINGS", "hash")
     if kind == "bedrock":
         return BedrockTitanEmbedding()
+    if kind == "azure_openai":
+        return AzureOpenAIEmbedding(
+            os.environ["SECONDCHANCE_AZURE_OPENAI_ENDPOINT"], os.environ["SECONDCHANCE_AZURE_OPENAI_EMBEDDING_DEPLOYMENT"]
+        )
     if kind == "ollama":
         return OllamaEmbedding(os.environ["SECONDCHANCE_OLLAMA_URL"], os.environ.get("SECONDCHANCE_OLLAMA_EMBED_MODEL", "bge-m3"))
     return HashEmbedding()

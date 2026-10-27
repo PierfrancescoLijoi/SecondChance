@@ -4,11 +4,14 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "awslambdaric>=4.1,<4.2",
+    "azure-data-tables>=12.5",
+    "azure-identity>=1.19",
     "boto3>=1.40",
     "fastapi>=0.115",
     "httpx>=0.28",
     "mcp>=1.30,<2",
     "pydantic>=2.10",
+    "pyjwt[crypto]>=2.9",
     "uvicorn>=0.30",
 ]
 
@@ -21,3 +24,7 @@ testpaths = ["tests"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.uv]
+# Supply chain: releases younger than two weeks wait (azure-identity 1.27, multidict 7.2: October 2026).
+constraint-dependencies = ["azure-identity<1.27", "multidict<7.2"]

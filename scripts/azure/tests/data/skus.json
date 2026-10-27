@@ -1,0 +1,6 @@
+[
+  {"name": "germanywestcentral", "supportedServerEditions": [
+    {"name": "Burstable", "supportedServerSkus": [{"name": "Standard_B1ms", "vCores": 1}, {"name": "Standard_B2s", "vCores": 2}]},
+    {"name": "GeneralPurpose", "supportedServerSkus": [{"name": "Standard_D2ds_v5", "vCores": 2}, {"name": "Standard_D4ds_v5", "vCores": 4}]}
+  ]}
+]

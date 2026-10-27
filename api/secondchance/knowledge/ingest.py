@@ -196,7 +196,7 @@ def process(tenant_id: uuid.UUID, version_id: uuid.UUID) -> str:
 def _scan_verdict(key: str) -> str:
     """'clean', 'pending', or the scan status that fails the file closed (threats_found, failed,
     unsupported, access_denied). Without a scanner (local, emulation) every file is clean."""
-    if os.environ.get("SECONDCHANCE_MALWARE_SCAN") != "guardduty":
+    if os.environ.get("SECONDCHANCE_MALWARE_SCAN") not in {"guardduty", "defender"}:
         return "clean"
     deadline = time.monotonic() + SCAN_WAIT.total_seconds()
     while (status := storage.scan_status(key)) is None:

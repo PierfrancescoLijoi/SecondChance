@@ -98,19 +98,43 @@ class CorrelationIdMiddleware:
             correlation_id.reset(token)
 
 
-def configure_telemetry(app=None, engine=None) -> bool:
-    """Exports via OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set; otherwise stays off.
+def _exporters():
+    """(span, metric, log) exporters, or None when telemetry is off.
 
-    Locally the endpoint is the otel-lgtm container, on AWS the ADOT collector.
+    OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set (locally the otel-lgtm container, on AWS the ADOT
+    collector); Azure Monitor when APPLICATIONINSIGHTS_CONNECTION_STRING is set (ADR-023).
+    """
+    if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+        return OTLPSpanExporter(), OTLPMetricExporter(), OTLPLogExporter()
+    connection_string = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    if connection_string:
+        from azure.monitor.opentelemetry.exporter import (
+            AzureMonitorLogExporter, AzureMonitorMetricExporter, AzureMonitorTraceExporter,
+        )
+
+        from secondchance.cloud import azure_credential
+
+        # The component accepts Entra tokens only: the managed identity needs Monitoring Metrics Publisher.
+        options = {"connection_string": connection_string, "credential": azure_credential()}
+        return AzureMonitorTraceExporter(**options), AzureMonitorMetricExporter(**options), AzureMonitorLogExporter(**options)
+    return None
+
+
+def configure_telemetry(app=None, engine=None) -> bool:
+    """Exports spans, metrics and logs when an exporter is configured (see _exporters); otherwise stays off.
+
     OTEL_SERVICE_NAME and the other standard OTEL_* variables are honoured.
     """
-    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+    exporters = _exporters()
+    if exporters is None:
         return False
+    span_exporter, metric_exporter, log_exporter = exporters
 
     from opentelemetry._logs import set_logger_provider
-    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
     from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
@@ -123,13 +147,13 @@ def configure_telemetry(app=None, engine=None) -> bool:
 
     resource = Resource.create({"service.name": os.environ.get("OTEL_SERVICE_NAME", "secondchance-api")})
     tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
     trace.set_tracer_provider(tracer_provider)
     metrics.set_meter_provider(
-        MeterProvider(resource=resource, metric_readers=[PeriodicExportingMetricReader(OTLPMetricExporter())])
+        MeterProvider(resource=resource, metric_readers=[PeriodicExportingMetricReader(metric_exporter)])
     )
     logger_provider = LoggerProvider(resource=resource)
-    logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
     set_logger_provider(logger_provider)
     _add_handler(LoggingHandler(logger_provider=logger_provider))  # same redaction as stdout
     if app is not None:

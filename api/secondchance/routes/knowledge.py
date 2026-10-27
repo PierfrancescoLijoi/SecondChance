@@ -1,6 +1,5 @@
 """Knowledge service API (ADR-015): spaces, documents, ingestion jobs, search, answers."""
 
-import os
 import uuid
 from datetime import datetime
 from functools import lru_cache
@@ -15,7 +14,7 @@ from secondchance.identity import ROLES, Claims, require_roles, tenant_session
 from secondchance.knowledge import ingest
 from secondchance.knowledge.retrieval import Hit, answer, search
 from secondchance.observability import current_correlation_id
-from secondchance.queues import Queue, SqsQueue
+from secondchance.queues import Queue, open_queue
 
 router = APIRouter(tags=["knowledge"])
 TenantSession = Depends(tenant_session, scope="function")
@@ -26,7 +25,7 @@ Language = Literal["en", "da", "pl", "it"]
 
 @lru_cache
 def jobs_queue() -> Queue:
-    return SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_JOBS", "jobs"))
+    return open_queue("SECONDCHANCE_QUEUE_JOBS", "jobs")
 
 
 class SpaceCreate(BaseModel):

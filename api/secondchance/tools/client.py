@@ -61,6 +61,12 @@ class ToolGatewayClient:
             return body["result"]
         if not self.base_url:
             raise RuntimeError("MCP Tool Gateway is not configured")
-        response = httpx.post(f"{self.base_url.rstrip('/')}/v1/tools/call", json=payload, timeout=35)
+        headers = {}
+        gateway_client_id = os.getenv("SECONDCHANCE_MCP_GATEWAY_AUDIENCE")
+        if gateway_client_id:  # Azure: the caller proves who it is with its managed identity (ADR-023)
+            from secondchance.service_auth import token_for
+
+            headers["Authorization"] = f"Bearer {token_for(gateway_client_id)}"
+        response = httpx.post(f"{self.base_url.rstrip('/')}/v1/tools/call", json=payload, headers=headers, timeout=35)
         response.raise_for_status()
         return response.json()["result"]

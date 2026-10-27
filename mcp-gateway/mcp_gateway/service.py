@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+from functools import lru_cache
 from typing import Any
 
 import boto3
@@ -21,7 +22,16 @@ policy = ToolPolicy()
 limiter = MemoryRateLimiter(30)
 
 
+@lru_cache
+def _table_limiter():
+    from mcp_gateway.policy import TableRateLimiter
+
+    return TableRateLimiter()
+
+
 def _rate_limiter():
+    if os.getenv("SECONDCHANCE_MCP_RATE_LIMIT_TABLE_ENDPOINT"):  # Azure Table Storage
+        return _table_limiter()
     table = os.getenv("SECONDCHANCE_MCP_RATE_LIMIT_TABLE")
     if table:
         from mcp_gateway.policy import DynamoDBRateLimiter
@@ -59,7 +69,13 @@ def _invoke_executor(payload: dict[str, Any]) -> dict[str, Any]:
     if executor_url:
         import httpx
 
-        response = httpx.post(f"{executor_url.rstrip('/')}/execute", json=payload, timeout=30)
+        headers = {}
+        executor_client_id = os.getenv("SECONDCHANCE_TOOL_EXECUTOR_AUDIENCE")
+        if executor_client_id:  # Azure: the gateway proves its identity to the executor (ADR-023)
+            from mcp_gateway.service_auth import token_for
+
+            headers["Authorization"] = f"Bearer {token_for(executor_client_id)}"
+        response = httpx.post(f"{executor_url.rstrip('/')}/execute", json=payload, headers=headers, timeout=30)
         response.raise_for_status()
         return response.json()
     function_name = os.environ["SECONDCHANCE_TOOL_EXECUTOR_FUNCTION"]

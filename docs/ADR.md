@@ -1,6 +1,6 @@
 # SecondChance — Architecture Decision Records
 
-Short format: context, decision, rejected alternatives, consequences. Status: ADR-001…009 **accepted in v0.2**, ADR-010…019 **accepted in v0.3**, ADR-020 **accepted at the starting point**, ADR-021 **accepted in v0.5**, all to be reviewed after the pilot.
+Short format: context, decision, rejected alternatives, consequences. Status: ADR-001…009 **accepted in v0.2**, ADR-010…019 **accepted in v0.3**, ADR-020 **accepted at the starting point**, ADR-021 **accepted in v0.5**, ADR-022 and ADR-023 **accepted in v0.6**, all to be reviewed after the pilot.
 
 | ADR | Topic | ADR | Topic |
 |---|---|---|---|
@@ -14,7 +14,8 @@ Short format: context, decision, rejected alternatives, consequences. Status: AD
 | [008](#adr-008--ai-logs-metadata-yes-plain-text-prompts-no) | AI logs | [018](#adr-018--aws-deployment-terraform-no-access-keys-self-configuration) | AWS deployment and credentials |
 | [009](#adr-009--ai-act-classification) | AI Act | [019](#adr-019--internationalisation-english-first-then-danish-polish-and-italian) | Languages |
 | [010](#adr-010--agent-layer-stateless-supervisor-and-specialists-inside-deterministic-workflows) | Agent layer | [020](#adr-020--licence-polyform-noncommercial-commercial-use-by-agreement) | Licence |
-| | | [021](#adr-021--operations-or-tools-proposals-bound-to-a-hash-missions-and-a-notification-outbox) | Matching, approval, missions, notifications |
+| [022](#adr-022--detective-controls-cloudtrail-guardduty-and-a-malware-verdict-before-parsing) | Detective controls | [021](#adr-021--operations-or-tools-proposals-bound-to-a-hash-missions-and-a-notification-outbox) | Matching, approval, missions, notifications |
+| [023](#adr-023--multi-cloud-the-same-code-on-azure-with-adapters-container-apps-and-entra) | Multi-cloud: Azure | | |
 
 The choices were checked against the AWS Well-Architected Framework with the Generative AI Lens. Prices and model availability per region change often: check them in the AWS Pricing Calculator and the Bedrock documentation before every deployment.
 
@@ -655,3 +656,37 @@ It also names a stack (LangGraph, Celery, MinIO, Kubernetes, LiteLLM, TEI) that 
 - Costs grow a little: GuardDuty by events analysed, Malware Protection by GB scanned, CloudTrail data events per 100,000 events, S3 storage for the trail. See [section 10 of the operations guide](operations/README.md#10-costs).
 - Ingestion of a PDF waits for the scan: usually seconds, at most until the next recovery run (2 minutes in the pilot, 1 hour in the demo).
 - Signatures do not catch a parser zero-day: structural validation and parsing in an isolated worker remain the other layers.
+
+---
+
+## ADR-023 — Multi-cloud: the same code on Azure, with adapters, Container Apps and Entra
+
+**Context.** Organisations that adopt SecondChance already run on one cloud or the other, and a public-sector or NGO buyer may be tied to Azure by contract. The code was already written against ports (queues, objects, models, identity, e-mail, real time) with an AWS adapter and a local one (NFR-013); the Terraform module, the scripts and a few call sites were AWS only. The requirement is that whoever deploys chooses the provider, that Azure is as professional as AWS (private data plane, no secrets, least privilege, detective controls, alarms, tests that run without an account), and that the AWS path does not change.
+
+**Decision.**
+- **One switch, not an abstraction layer.** `SECONDCHANCE_CLOUD=azure` selects the Azure adapter at each existing seam (`queues.open_queue`, `storage.store`, `llm`, `knowledge.embeddings`, `notify`, `realtime`, `dbconn`, `auth`, the gateway's rate limiter). Each adapter implements the protocol its AWS sibling already had; call sites changed only where they named `SqsQueue` directly. No new framework, no lowest-common-denominator interface.
+- **A parallel Terraform tree** (`infra/terraform/azure/{bootstrap,modules/secondchance,envs}`), one file per area like the AWS module. The AWS tree is untouched; `scripts/connect.sh <aws|azure>` and `SECONDCHANCE_CLOUD` choose between the script sets.
+- **Container Apps, not Functions or AKS.** The images are ordinary containers, the workers are already long-running loops (`python -m secondchance.jobs`, `.notify`, `.agents.worker`), KEDA scales them from zero on queue depth and HTTP concurrency, and there is no cluster to run. Functions would need a second packaging of every handler; AKS contradicts ADR-001.
+- **The `agents` queue replaces Step Functions.** Run state, leases, fencing, budgets and the recovery job already live in PostgreSQL (ADR-005, ADR-010) and the queue dispatcher was the tested local path; a Durable Functions app would add a second runtime and a second place where run state could diverge. Service Bus gives the same `max_delivery_count` to dead-letter behaviour as SQS.
+- **No secret anywhere.** Every service has local authentication off and is reached with the caller's managed identity: PostgreSQL (Entra roles created from object ids by a bootstrap job running as the server's administrator), Service Bus, Blob and Table Storage, Azure OpenAI and Content Safety, Web PubSub, Communication Services, Application Insights, the registry. Nine user-assigned identities, each with the narrowest role at the narrowest scope; the application's blob access is a custom role that can read and write documents and read their malware tag but cannot write tags.
+- **Entra for sign-in and for service calls.** Users sign in with authorization code + PKCE against an app registration; the API accepts v2.0 tokens for its audience and scope and uses the object id (`oid`) as the subject, because Entra's `sub` is pairwise per application and cannot be looked up later. The gateway and the tool executor are app registrations with app roles (`Tool.Invoke`, `Tool.Execute`) granted to the agent worker and the gateway identities: the Entra counterpart of Lambda invoke permissions, with nothing to rotate.
+- **Real time by negotiation.** The API checks membership and ownership (as the WebSocket `$connect` handler did) and mints a Web PubSub URL whose token joins one group and grants no send right; workers publish to the group. No connection registry is needed.
+- **The edge cannot be skipped.** Front Door with a WAF policy; containers answer 403 without the profile's id in `X-Azure-FDID`, Microsoft's documented origin lock (an NSG cannot filter the inbound traffic of an external Container Apps environment; Private Link from Premium Front Door is the stricter option).
+- **Malware verdict before parsing** is kept (ADR-022) with Defender for Storage on-upload scanning; the worker reads its index tag and fails closed on anything but "No threats found".
+- **Models.** Azure OpenAI in the EU data zone, with `Global*` deployments refused at plan time, and Content Safety as the guardrail. Model, version, SKU and capacity are variables chosen by the preflight from what the region offers.
+- **Evidence.** The module is evaluated by `terraform test` with mocked providers whose resource ids look like Azure's, so the provider's own validators run; the adapters have unit and SDK-contract tests; the scripts run end to end against stand-ins for `az`, `terraform`, `docker` and `curl`; the images are built and booted in CI. What only a subscription can tell is checked by the preflight before Terraform and by `verify.sh` after it ([deployment-azure.md](deployment-azure.md)).
+
+**Rejected alternatives.**
+- *A cloud-neutral platform layer (Dapr, Crossplane, a Terraform abstraction module)*: it hides the differences that matter (identity, private networking, scaling triggers) and adds a runtime to operate; the existing ports already isolate what the application needs.
+- *Kubernetes for both clouds*: the single biggest operating cost for a one-maintainer project, and what ADR-001 rejected.
+- *Azure Functions with Durable Functions*: second packaging of every handler and a second durable-state store.
+- *Premium Service Bus and Premium Front Door by default*: about EUR 650 and 300 a month for private queues and managed WAF rules; both are variables for the pilot. Messages hold identifiers only (ADR-011), so Standard with Entra-only authentication is an acceptable default.
+- *Connection strings or keys in Key Vault*: it works, but a vault of keys is more to rotate and to leak than services that accept no key at all.
+- *Customer-managed keys now*: they add a vault, purge protection and an RBAC propagation dependency to the first apply; platform-managed keys with infrastructure encryption are the starting point and CMK the documented next step.
+- *Claude on Azure*: availability and EU data-zone residency vary by region and tenant; the model is a variable, so it can be adopted where offered.
+
+**Consequences.**
+- Two clouds to keep working: the Azure adapters are covered by unit tests and the module by offline evaluation, but only the AWS path has the Lambda emulation job; on Azure the integration test is `verify.sh`, run after every deployment.
+- Different models mean different answers: the router golden set and the RAG evaluation must be re-run per cloud before a pilot relies on it.
+- A different cost shape: Azure's fixed monthly prices (Front Door, the always-on database, Defender) make the demo dearer than the AWS demo; the budget variable says so.
+- The guardrail differs (no PII anonymisation, optional grounding), the JWT is checked by the API instead of the edge, and the API and workers share one database identity; each is listed in [deployment-azure.md](deployment-azure.md#what-is-not-the-same-as-on-aws) and the threat model.

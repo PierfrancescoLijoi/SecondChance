@@ -1,10 +1,15 @@
 name: Deploy
 
-# Manual only. The AWS role trusts this repository's 'production' environment, which should
-# require a reviewer: no AWS secret is stored in GitHub (ADR-018).
+# Manual only. The AWS role and the Azure federated credential trust this repository's 'production'
+# environment, which should require a reviewer: no cloud secret is stored in GitHub (ADR-018, ADR-023).
 on:
   workflow_dispatch:
     inputs:
+      cloud:
+        description: Cloud provider
+        type: choice
+        options: [aws, azure]
+        default: aws
       environment:
         description: Target environment
         type: choice
@@ -16,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: deploy-${{ inputs.cloud }}-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
@@ -25,7 +30,14 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      - if: inputs.cloud == 'azure'
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - if: inputs.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
@@ -39,6 +51,9 @@ jobs:
       - name: Deploy
         env:
           TARGET: ${{ inputs.environment }}
+          SECONDCHANCE_CLOUD: ${{ inputs.cloud }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          SECONDCHANCE_GITHUB_REPOSITORY: ${{ github.repository }}
           SECONDCHANCE_ALARM_EMAIL: ${{ vars.SECONDCHANCE_ALARM_EMAIL }}
           SECONDCHANCE_AUTO_APPROVE: "1"
         run: scripts/deploy.sh "$TARGET"

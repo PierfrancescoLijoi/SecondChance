@@ -9,7 +9,6 @@ ever sits in a queue (ADR-005).
 """
 
 import logging
-import os
 import uuid
 from datetime import timedelta
 from functools import lru_cache
@@ -33,9 +32,9 @@ handoffs = meter.create_counter("secondchance.notifications.handoffs", descripti
 
 @lru_cache
 def notify_queue() -> Queue:
-    from secondchance.queues import SqsQueue
+    from secondchance.queues import open_queue
 
-    return SqsQueue(os.environ.get("SECONDCHANCE_QUEUE_NOTIFY", "notify"))
+    return open_queue("SECONDCHANCE_QUEUE_NOTIFY", "notify")
 
 
 def network_language(session: Session) -> str:

@@ -1,0 +1,4 @@
+[
+  {"name": {"value": "OpenAI.DataZoneStandard.gpt-4.1-mini", "localizedValue": "Data Zone Standard gpt-4.1-mini"}, "currentValue": 0.0, "limit": 100.0, "unit": "Count"},
+  {"name": {"value": "OpenAI.DataZoneStandard.text-embedding-3-large", "localizedValue": "Data Zone Standard text-embedding-3-large"}, "currentValue": 10.0, "limit": 100.0, "unit": "Count"}
+]
