@@ -35,6 +35,7 @@
   <a href="#aws-architecture"><img alt="Amazon Web Services" src="https://img.shields.io/badge/AWS-serverless-FF9900?style=flat-square&logo=amazonwebservices&logoColor=white"></a>
   <a href="#aws-architecture"><img alt="AWS Lambda" src="https://img.shields.io/badge/AWS%20Lambda-compute-FF9900?style=flat-square&logo=awslambda&logoColor=white"></a>
   <a href="#aws-architecture"><img alt="AWS Step Functions" src="https://img.shields.io/badge/Step%20Functions-orchestration-E7157B?style=flat-square"></a>
+  <a href="#deploy-to-azure"><img alt="Microsoft Azure" src="https://img.shields.io/badge/Azure-Container%20Apps-0078D4?style=flat-square&logo=microsoftazure&logoColor=white"></a>
   <a href="#deploy-to-aws"><img alt="Terraform" src="https://img.shields.io/badge/Terraform-IaC-844FBA?style=flat-square&logo=terraform&logoColor=white"></a>
   <a href="#run-locally"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-local%20dev-2496ED?style=flat-square&logo=docker&logoColor=white"></a>
   <a href="#engineering-confidence"><img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=flat-square&logo=githubactions&logoColor=white"></a>
@@ -48,11 +49,14 @@
   <a href="#security-model">Security</a> ·
   <a href="#run-locally">Quick start</a> ·
   <a href="#deploy-to-aws">AWS deployment</a> ·
+  <a href="#deploy-to-azure">Azure deployment</a> ·
   <a href="#join-the-project">Contribute</a>
 </p>
-SecondChance is a source-available coordination platform, free for non-profit and charitable organisations, that helps surplus food reach people instead of becoming waste. Donors publish available food, NGO networks organise the work, coordinators reserve offers, and authorised people remain in control of every operational decision.
+SecondChance is a multi-cloud, source-available coordination platform, free for non-profit and charitable organisations, that helps surplus food reach people instead of becoming waste. Donors publish available food, NGO networks organise the work, coordinators reserve offers, and authorised people remain in control of every operational decision.
 
 The platform combines a multilingual web application, strict tenant isolation, asynchronous workers, grounded knowledge search and governed AI agents. AI can retrieve procedures, explain evidence and prepare a plan; it cannot silently allocate food or bypass a human approval.
+
+The same code and the same images deploy to **AWS** (Lambda, Step Functions, Aurora, Bedrock) or to **Azure** (Container Apps, Front Door, PostgreSQL flexible server, Azure OpenAI): you choose the provider when you deploy, with `scripts/connect.sh aws` or `scripts/connect.sh azure`. Locally it runs with Docker Compose.
 
 ## See it in action
 
