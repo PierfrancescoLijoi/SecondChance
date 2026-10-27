@@ -1356,7 +1356,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "awslambdaric", specifier = ">=4.1,<4.2" },
+    { name = "awslambdaric", specifier = ">=4.1,<4.3" },
     { name = "azure-data-tables", specifier = ">=12.5" },
     { name = "azure-identity", specifier = ">=1.19" },
     { name = "boto3", specifier = ">=1.40" },
