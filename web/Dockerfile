@@ -10,12 +10,12 @@ RUN npm run build
 
 # nginx renders the template at start: the CSP, the Front Door id and /config.json come from the environment,
 # so one image serves every environment and every region (see infra/terraform/azure/modules/secondchance/compute.tf).
-FROM nginx:1.31.0-alpine AS azure
+FROM nginx:1.31.7-alpine AS azure
 COPY nginx.azure.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080
 
-FROM nginx:1.31.0-alpine
+FROM nginx:1.31.7-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080
