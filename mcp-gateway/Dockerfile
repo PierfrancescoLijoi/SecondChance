@@ -1,4 +1,4 @@
-FROM python:3.12.14-slim-trixie AS base
+FROM python:3.12.15-slim-trixie AS base
 COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never PATH=/opt/venv/bin:$PATH
 WORKDIR /gateway
