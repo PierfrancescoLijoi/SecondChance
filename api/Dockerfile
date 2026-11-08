@@ -2,7 +2,7 @@
 #   worker:     SQS and scheduled handlers through awslambdaric (command chosen per function)
 #   lambda-api: the API behind the Lambda Web Adapter; scripts/deploy.sh pushes it as <tag>-api
 #   api:        the API on uvicorn, the default target that Compose builds; it never pulls the adapter
-FROM python:3.12.14-slim-trixie AS base
+FROM python:3.12.15-slim-trixie AS base
 COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
